@@ -18,6 +18,36 @@
       Movies are better<br>
       <span class="text-purple-400">together.</span>
     </h1>
+        <p class="text-gray-400 text-lg mb-8">
+      Watch together, wherever you are.
+    </p>
+
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      <button
+        id="createRoomBtn"
+        class="bg-purple-600 hover:bg-purple-500 px-6 py-3 rounded-xl font-semibold"
+      >
+        Create a Room
+      </button>
+
+      <div class="flex gap-2">
+        <input
+          id="roomCodeInput"
+          type="text"
+          placeholder="Enter room code"
+          class="w-full min-w-0 rounded-xl bg-gray-800 border border-gray-700 px-4 py-3 text-white"
+        />
+
+        <button
+          id="joinRoomBtn"
+          class="bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-xl font-semibold"
+        >
+          Join
+        </button>
+      </div>
+    </div>
+
+    <p id="statusMessage" class="text-gray-400 mt-6" aria-live="polite"></p>
 
     <p class="text-gray-400 mb-8">
       Your private cinema with friends, in real time.
@@ -32,5 +62,46 @@
       </p>
     </div>
   </main>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <script>
+    const socket = io();
+
+    const createBtn = document.getElementById("createRoomBtn");
+    const joinBtn = document.getElementById("joinRoomBtn");
+    const roomInput = document.getElementById("roomCodeInput");
+    const status = document.getElementById("statusMessage");
+
+    createBtn.addEventListener("click", () => {
+      socket.emit("create_room");
+    });
+
+    joinBtn.addEventListener("click", () => {
+      const code = roomInput.value.trim().toUpperCase();
+
+      if (!code) {
+        status.textContent = "Please enter a room code.";
+        return;
+      }
+
+      socket.emit("join_room", { room: code });
+    });
+
+    socket.on("room_created", (data) => {
+      roomInput.value = data.room;
+      status.textContent = "Room created! Share this code: " + data.room;
+    });
+
+    socket.on("room_joined", (data) => {
+      status.textContent = "You joined room: " + data.room;
+    });
+
+    socket.on("room_error", (data) => {
+      status.textContent = data.message;
+    });
+
+    socket.on("connect_error", () => {
+      status.textContent = "Cannot connect to the server. Please refresh.";
+    });
+  </script>
 </body>
 </html>
