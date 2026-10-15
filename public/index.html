@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Velvet Watch</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     body {
@@ -21,172 +23,139 @@
       animation: floatUp 2s ease-out forwards;
       pointer-events: none;
     }
-    ::-webkit-scrollbar { width: 8px; }
+    @keyframes danmakuSlide {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-120%); }
+    }
+    .danmaku-text {
+      position: absolute;
+      white-space: nowrap;
+      font-weight: 800;
+      color: #FFFFFF;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(229,9,20,0.8);
+      animation: danmakuSlide 8s linear forwards;
+      pointer-events: none;
+    }
+    ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #121212; }
     ::-webkit-scrollbar-thumb { background: #282828; border-radius: 9999px; }
-    ::-webkit-scrollbar-thumb:hover { background: #535353; }
   </style>
 </head>
 
 <body class="min-h-screen p-4 md:p-8 selection:bg-[#E50914] selection:text-white">
-  <main class="max-w-6xl mx-auto">
+  <main id="snapshotTarget" class="max-w-6xl mx-auto space-y-6">
     
     <!-- HEADER NAVBAR -->
-    <header class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 pb-4 border-b border-[#282828]">
+    <header class="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b border-[#282828]">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-full bg-[#E50914] flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-[#E50914]/25">
           ▶
         </div>
         <div>
           <h1 class="text-2xl font-extrabold tracking-tight text-white flex items-center gap-2">
-            Velvet Watch <span class="text-[10px] bg-[#E50914]/10 text-[#E50914] border border-[#E50914]/30 px-2 py-0.5 rounded-full font-bold uppercase">Live Sync</span>
+            Velvet Watch <span class="text-[10px] bg-[#E50914]/10 text-[#E50914] border border-[#E50914]/30 px-2 py-0.5 rounded-full font-bold uppercase">Pro Lounge</span>
           </h1>
-          <p class="text-xs text-[#B3B3B3]">Watch and chat together in real time.</p>
+          <p class="text-xs text-[#B3B3B3]">WebRTC Voice/Video • Danmaku Overlay • Live Sync</p>
         </div>
       </div>
 
-      <div class="flex items-center gap-2 w-full sm:w-auto">
-        <button
-          id="createRoomBtn"
-          class="bg-[#E50914] hover:bg-[#ff0f1a] text-white px-6 py-2.5 rounded-full font-bold text-xs tracking-wider transition-all shadow-lg shadow-[#E50914]/25 hover:scale-105 active:scale-95 whitespace-nowrap"
-        >
+      <!-- CONTROLS -->
+      <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <button id="createRoomBtn" class="bg-[#E50914] hover:bg-[#ff0f1a] text-white px-5 py-2.5 rounded-full font-bold text-xs tracking-wider transition-all shadow-lg shadow-[#E50914]/25">
           Create Room
         </button>
 
-        <div class="flex gap-2 flex-1 sm:flex-initial">
-          <input
-            id="roomCodeInput"
-            type="text"
-            placeholder="ROOM CODE"
-            class="w-full sm:w-36 rounded-full bg-[#181818] border border-[#282828] focus:border-[#E50914] px-4 py-2.5 text-white placeholder-[#535353] uppercase tracking-widest font-extrabold text-xs focus:outline-none transition-all"
-          />
+        <input id="roomCodeInput" type="text" placeholder="ROOM CODE" class="w-28 rounded-full bg-[#181818] border border-[#282828] focus:border-[#E50914] px-3 py-2.5 text-white uppercase font-extrabold text-xs text-center focus:outline-none" />
 
-          <button
-            id="joinRoomBtn"
-            class="bg-[#282828] hover:bg-[#3E3E3E] text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all hover:scale-105 active:scale-95"
-          >
-            Join
-          </button>
-        </div>
+        <button id="joinRoomBtn" class="bg-[#282828] hover:bg-[#3E3E3E] text-white px-4 py-2.5 rounded-full text-xs font-bold transition-all">
+          Join
+        </button>
+        
+        <button id="snapshotBtn" class="bg-[#282828] hover:bg-[#3E3E3E] text-white px-3 py-2.5 rounded-full text-xs font-bold transition-all">
+          📸 Snapshot
+        </button>
       </div>
     </header>
 
-    <p id="statusMessage" class="text-[#E50914] text-xs font-bold mb-6 text-center min-h-[16px]" aria-live="polite"></p>
+    <p id="statusMessage" class="text-[#E50914] text-xs font-bold text-center min-h-[16px]"></p>
 
-    <!-- WATCH PARTY MAIN DASHBOARD GRID -->
+    <!-- WEBRTC CAMERA STREAM GRID -->
+    <div id="videoGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#181818] p-3 rounded-2xl border border-[#282828]">
+      <div class="relative aspect-video bg-[#121212] rounded-xl overflow-hidden border border-[#282828]">
+        <video id="localVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
+        <div class="absolute bottom-1 left-1 bg-black/60 px-2 py-0.5 rounded text-[9px] font-bold">You (Local)</div>
+      </div>
+    </div>
+
+    <!-- CAM/MIC TOGGLE BAR -->
+    <div class="flex items-center justify-between bg-[#181818] px-5 py-2.5 rounded-2xl border border-[#282828]">
+      <span class="text-xs font-bold text-[#B3B3B3]">🎙️ WebRTC Voice & Video Lounge</span>
+      <div class="flex gap-2">
+        <button id="toggleCamBtn" class="bg-[#282828] hover:bg-[#3E3E3E] text-white px-3 py-1.5 rounded-xl text-xs font-bold">📷 Start Cam</button>
+        <button id="toggleMicBtn" class="bg-[#282828] hover:bg-[#3E3E3E] text-white px-3 py-1.5 rounded-xl text-xs font-bold">🎙️ Mute</button>
+      </div>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
       
-      <!-- LEFT 2 COLUMNS: VIDEO PLAYER & LIVE API DISCOVERY -->
-      <div class="lg:col-span-2 space-y-5">
+      <!-- LEFT 2 COLUMNS: PLAYER & DANMAKU -->
+      <div class="lg:col-span-2 space-y-4">
         
-        <!-- URL INPUT BAR -->
-        <div class="flex flex-col sm:flex-row gap-2 bg-[#181818] p-2 rounded-2xl border border-[#282828]">
-          <input
-            id="youtubeUrl"
-            type="url"
-            placeholder="Paste a YouTube video link..."
-            class="flex-1 rounded-xl bg-[#121212] border border-transparent px-4 py-2 text-white placeholder-[#535353] focus:outline-none focus:border-[#E50914] text-xs transition-all"
-          />
-          <button
-            id="loadVideoBtn"
-            class="bg-[#E50914] hover:bg-[#ff0f1a] text-white px-5 py-2 rounded-xl font-bold text-xs transition-all hover:scale-105 active:scale-95"
-          >
-            Load Video
-          </button>
+        <div class="flex gap-2 bg-[#181818] p-2 rounded-2xl border border-[#282828]">
+          <input id="youtubeUrl" type="url" placeholder="Paste YouTube link..." class="flex-1 rounded-xl bg-[#121212] px-4 py-2 text-white text-xs focus:outline-none focus:border-[#E50914]" />
+          <button id="loadVideoBtn" class="bg-[#E50914] text-white px-5 py-2 rounded-xl font-bold text-xs">Load</button>
         </div>
 
-        <p id="videoMessage" class="text-[#B3B3B3] text-xs min-h-[16px] px-1"></p>
-
-        <!-- VIDEO PLAYER CONTAINER -->
-        <div class="relative aspect-video bg-black rounded-2xl overflow-hidden border border-[#282828] shadow-2xl shadow-red-950/20">
+        <!-- VIDEO CONTAINER WITH OVERLAYS -->
+        <div class="relative aspect-video bg-black rounded-2xl overflow-hidden border border-[#282828]">
           <div id="youtubePlayer" class="w-full h-full"></div>
           <div id="emojiOverlay" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+          <div id="danmakuOverlay" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
         </div>
 
-        <!-- EMOJI REACTION BAR -->
+        <!-- TIMED COMMENT INPUT BAR -->
+        <div class="flex gap-2 bg-[#181818] p-2 rounded-2xl border border-[#282828]">
+          <input id="danmakuInput" type="text" placeholder="Send timed Danmaku comment over video..." class="flex-1 bg-[#121212] px-3 py-1.5 rounded-xl text-xs text-white focus:outline-none" />
+          <button id="sendDanmakuBtn" class="bg-[#E50914] text-white px-4 py-1.5 rounded-xl text-xs font-bold">Send Danmaku</button>
+        </div>
+
+        <!-- REACTION EMOJIS -->
         <div class="flex items-center justify-between bg-[#181818] px-5 py-3 rounded-2xl border border-[#282828]">
-          <span class="text-[11px] text-[#B3B3B3] font-bold uppercase tracking-wider">Reactions</span>
+          <span class="text-xs text-[#B3B3B3] font-bold uppercase">Reactions</span>
           <div class="flex gap-4">
-            <button class="reaction-btn text-xl hover:scale-130 transition-transform active:scale-90">❤️</button>
-            <button class="reaction-btn text-xl hover:scale-130 transition-transform active:scale-90">🔥</button>
-            <button class="reaction-btn text-xl hover:scale-130 transition-transform active:scale-90">😭</button>
-            <button class="reaction-btn text-xl hover:scale-130 transition-transform active:scale-90">😮</button>
-            <button class="reaction-btn text-xl hover:scale-130 transition-transform active:scale-90">💀</button>
+            <button class="reaction-btn text-xl hover:scale-125 transition-transform">❤️</button>
+            <button class="reaction-btn text-xl hover:scale-125 transition-transform">🔥</button>
+            <button class="reaction-btn text-xl hover:scale-125 transition-transform">😭</button>
+            <button class="reaction-btn text-xl hover:scale-125 transition-transform">😮</button>
+            <button class="reaction-btn text-xl hover:scale-125 transition-transform">💀</button>
           </div>
         </div>
 
-        <!-- LIVE YOUTUBE API SEARCH DISCOVERY -->
-        <div class="bg-[#181818] p-5 rounded-2xl border border-[#282828] space-y-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-white uppercase tracking-wider">🎬 Live Movie & Video Search</h3>
-            <span class="text-[10px] text-[#E50914] font-bold bg-[#121212] px-3 py-1 rounded-full border border-[#E50914]/20">YouTube Data API v3</span>
-          </div>
-          
-          <div class="flex gap-2">
-            <input
-              id="searchMovieInput"
-              type="text"
-              placeholder="Type any movie trailer, song, or video title..."
-              class="flex-1 rounded-xl bg-[#121212] border border-[#282828] px-3.5 py-2 text-xs text-white placeholder-[#535353] focus:outline-none focus:border-[#E50914] transition-all"
-            />
-            <button
-              id="apiSearchBtn"
-              class="bg-[#E50914] hover:bg-[#ff0f1a] text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
-            >
-              Search
-            </button>
-          </div>
-
-          <div id="movieGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-64 overflow-y-auto pr-1"></div>
+        <!-- FUZZY SEARCH MOVIE GRID -->
+        <div class="bg-[#181818] p-4 rounded-2xl border border-[#282828] space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider">🎬 Shared Movie Discovery</h3>
+          <input id="searchMovieInput" type="text" placeholder="Fuzzy search titles..." class="w-full rounded-xl bg-[#121212] border border-[#282828] px-3 py-2 text-xs text-white focus:outline-none" />
+          <div id="movieGrid" class="grid grid-cols-3 gap-2 max-h-52 overflow-y-auto"></div>
         </div>
 
       </div>
 
-      <!-- RIGHT 1 COLUMN: SIDEBAR CHAT -->
+      <!-- RIGHT COLUMN: CHAT SIDEBAR -->
       <div class="bg-[#181818] p-4 rounded-2xl border border-[#282828] flex flex-col h-[580px]">
-        <div class="flex items-center justify-between mb-3 pb-3 border-b border-[#282828]">
-          <span class="text-xs font-bold text-white uppercase tracking-wider">💬 Room Chat</span>
-          <span id="roleBadge" class="text-[10px] bg-[#121212] text-[#E50914] border border-[#E50914]/30 px-2.5 py-0.5 rounded-full font-bold">Viewer</span>
-        </div>
+        <span class="text-xs font-bold uppercase pb-2 border-b border-[#282828]">💬 Lounge Chat</span>
+        
+        <input id="usernameInput" type="text" placeholder="Your display name..." class="my-3 rounded-xl bg-[#121212] border border-[#282828] px-3 py-1.5 text-xs text-white font-semibold focus:outline-none" />
 
-        <div class="mb-3">
-          <input
-            id="usernameInput"
-            type="text"
-            placeholder="Your display name..."
-            class="w-full rounded-xl bg-[#121212] border border-[#282828] focus:border-[#E50914] px-3 py-1.5 text-xs text-white placeholder-[#535353] focus:outline-none transition-all font-semibold"
-          />
-        </div>
+        <div id="chatMessages" class="flex-1 overflow-y-auto space-y-2 text-xs pr-1 mb-3"></div>
 
-        <div id="chatMessages" class="flex-1 overflow-y-auto space-y-2.5 text-xs pr-1 mb-3">
-          <p class="text-[#535353] italic text-center py-6">Connected to the room. Send a message!</p>
-        </div>
-
-        <div class="flex gap-2 pt-3 border-t border-[#282828]">
-          <input
-            id="chatInput"
-            type="text"
-            placeholder="Type a message..."
-            class="flex-1 rounded-xl bg-[#121212] border border-[#282828] px-3 py-2 text-xs text-white placeholder-[#535353] focus:outline-none focus:border-[#E50914] transition-all"
-          />
-          <button
-            id="sendChatBtn"
-            class="bg-[#E50914] hover:bg-[#ff0f1a] text-white px-4 py-2 rounded-xl text-xs font-bold transition-all hover:scale-105 active:scale-95"
-          >
-            Send
-          </button>
+        <div class="flex gap-2 pt-2 border-t border-[#282828]">
+          <input id="chatInput" type="text" placeholder="Message..." class="flex-1 rounded-xl bg-[#121212] border border-[#282828] px-3 py-2 text-xs text-white focus:outline-none" />
+          <button id="sendChatBtn" class="bg-[#E50914] text-white px-4 py-2 rounded-xl text-xs font-bold">Send</button>
         </div>
       </div>
 
     </div>
-
-    <!-- FOOTER STATUS -->
-    <footer class="mt-8 rounded-2xl border border-[#282828] bg-[#181818] p-4 text-center">
-      <p class="text-[#E50914] text-xs font-bold tracking-widest uppercase">
-        ✓ Real-Time Sync Engine Active (&le;500ms Drift Auto-Correction)
-      </p>
-    </footer>
-
   </main>
 
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
@@ -195,74 +164,141 @@
   <script>
     const socket = io();
 
-    // Paste your YouTube Data API v3 key here
-    const YOUTUBE_API_KEY = "AIzaSyBireHsybkea2yTTWf4Z9TKQto0NwP23Vk";
-
     let player;
     let isHost = false;
     let currentRoom = "";
     let isRemoteAction = false;
+    let localStream = null;
+    const peerConnections = {};
 
-    const createBtn = document.getElementById("createRoomBtn");
-    const joinBtn = document.getElementById("joinRoomBtn");
-    const roomInput = document.getElementById("roomCodeInput");
-    const status = document.getElementById("statusMessage");
-    const youtubeUrl = document.getElementById("youtubeUrl");
-    const loadVideoBtn = document.getElementById("loadVideoBtn");
-    const videoMessage = document.getElementById("videoMessage");
-    const roleBadge = document.getElementById("roleBadge");
-    const usernameInput = document.getElementById("usernameInput");
+    const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
+    const localVideo = document.getElementById("localVideo");
+    const videoGrid = document.getElementById("videoGrid");
+    const toggleCamBtn = document.getElementById("toggleCamBtn");
+    const toggleMicBtn = document.getElementById("toggleMicBtn");
+
+    // --- WEBRTC CAMERA / MIC SETUP ---
+    toggleCamBtn.addEventListener("click", async () => {
+      if (!localStream) {
+        try {
+          localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          localVideo.srcObject = localStream;
+          toggleCamBtn.textContent = "📷 Stop Cam";
+          toggleCamBtn.classList.replace("bg-[#282828]", "bg-[#E50914]");
+        } catch (err) {
+          alert("Camera/Mic permission denied or not available.");
+        }
+      } else {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+        localVideo.srcObject = null;
+        toggleCamBtn.textContent = "📷 Start Cam";
+        toggleCamBtn.classList.replace("bg-[#E50914]", "bg-[#282828]");
+      }
+    });
+
+    async function createPeerConnection(targetSid) {
+      const pc = new RTCPeerConnection(rtcConfig);
+      peerConnections[targetSid] = pc;
+
+      if (localStream) {
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+      }
+
+      pc.ontrack = (event) => {
+        let remoteVid = document.getElementById(`vid_${targetSid}`);
+        if (!remoteVid) {
+          const wrapper = document.createElement("div");
+          wrapper.id = `wrap_${targetSid}`;
+          wrapper.className = "relative aspect-video bg-[#121212] rounded-xl overflow-hidden border border-[#282828]";
+          wrapper.innerHTML = `<video id="vid_${targetSid}" autoplay playsinline class="w-full h-full object-cover"></video>`;
+          videoGrid.appendChild(wrapper);
+          remoteVid = wrapper.querySelector("video");
+        }
+        remoteVid.srcObject = event.streams[0];
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit("webrtc_ice_candidate", { target_sid: targetSid, candidate: event.candidate });
+        }
+      };
+
+      return pc;
+    }
+
+    socket.on("user_joined_webrtc", async (data) => {
+      const pc = await createPeerConnection(data.sid);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket.emit("webrtc_offer", { target_sid: data.sid, offer: offer });
+    });
+
+    socket.on("webrtc_offer", async (data) => {
+      const pc = await createPeerConnection(data.sender_sid);
+      await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      socket.emit("webrtc_answer", { target_sid: data.sender_sid, answer: answer });
+    });
+
+    socket.on("webrtc_answer", async (data) => {
+      const pc = peerConnections[data.sender_sid];
+      if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+    });
+
+    socket.on("webrtc_ice_candidate", async (data) => {
+      const pc = peerConnections[data.sender_sid];
+      if (pc) await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+    });
+
+    socket.on("user_left_webrtc", (data) => {
+      if (peerConnections[data.sid]) {
+        peerConnections[data.sid].close();
+        delete peerConnections[data.sid];
+      }
+      const wrap = document.getElementById(`wrap_${data.sid}`);
+      if (wrap) wrap.remove();
+    });
+
+    // --- YOUTUBE PLAYER & SYNC ENGINE ---
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('youtubePlayer', {
-        videoId: 'M7lc1UVf-VE',
-        playerVars: { 'playsinline': 1, 'controls': 1, 'modestbranding': 1 },
+        videoId: 'Pw-Tr25wSyk',
+        playerVars: { 'playsinline': 1, 'controls': 1 },
         events: { 'onStateChange': onPlayerStateChange }
       });
     }
 
     function onPlayerStateChange(event) {
       if (isRemoteAction || !currentRoom) return;
-      const currentTime = player.getCurrentTime();
-      if (event.data === YT.PlayerState.PLAYING) {
-        socket.emit("sync_action", { room: currentRoom, action: "play", time: currentTime });
-      } else if (event.data === YT.PlayerState.PAUSED) {
-        socket.emit("sync_action", { room: currentRoom, action: "pause", time: currentTime });
-      }
+      const time = player.getCurrentTime();
+      if (event.data === YT.PlayerState.PLAYING) socket.emit("sync_action", { room: currentRoom, action: "play", time: time });
+      else if (event.data === YT.PlayerState.PAUSED) socket.emit("sync_action", { room: currentRoom, action: "pause", time: time });
     }
 
-    createBtn.addEventListener("click", () => { socket.emit("create_room"); });
-
-    joinBtn.addEventListener("click", () => {
-      const code = roomInput.value.trim().toUpperCase();
-      if (!code) { status.textContent = "Please enter a room code."; return; }
-      socket.emit("join_room", { room: code });
+    document.getElementById("createRoomBtn").addEventListener("click", () => socket.emit("create_room"));
+    document.getElementById("joinRoomBtn").addEventListener("click", () => {
+      const code = document.getElementById("roomCodeInput").value.trim().toUpperCase();
+      const user = document.getElementById("usernameInput").value.trim() || "Guest";
+      if (code) socket.emit("join_room", { room: code, username: user });
     });
 
     socket.on("room_created", (data) => {
-      currentRoom = data.room; isHost = true; roomInput.value = data.room;
-      roleBadge.textContent = "Host"; status.textContent = "Room created! Share code: " + data.room;
+      currentRoom = data.room; isHost = true;
+      document.getElementById("roomCodeInput").value = data.room;
+      document.getElementById("statusMessage").textContent = "Room Created! Share Code: " + data.room;
     });
 
     socket.on("room_joined", (data) => {
       currentRoom = data.room; isHost = data.is_host;
-      roleBadge.textContent = isHost ? "Host" : "Viewer"; status.textContent = "You joined room: " + data.room;
+      document.getElementById("statusMessage").textContent = "Joined Room: " + data.room;
       if (data.video_id && player && player.loadVideoById) {
         isRemoteAction = true;
         player.loadVideoById(data.video_id, data.current_time || 0);
         if (!data.is_playing) player.pauseVideo();
-        setTimeout(() => { isRemoteAction = false; }, 1000);
-      }
-    });
-
-    socket.on("room_error", (data) => { status.textContent = data.message; });
-
-    socket.on("video_changed", (data) => {
-      if (player && player.loadVideoById) {
-        isRemoteAction = true;
-        player.loadVideoById(data.video_id);
-        videoMessage.textContent = "The room's video has been updated!";
-        setTimeout(() => { isRemoteAction = false; }, 1000);
+        setTimeout(() => isRemoteAction = false, 1000);
       }
     });
 
@@ -271,156 +307,128 @@
       isRemoteAction = true;
       if (data.action === "play") { player.seekTo(data.time, true); player.playVideo(); }
       else if (data.action === "pause") { player.seekTo(data.time, true); player.pauseVideo(); }
-      setTimeout(() => { isRemoteAction = false; }, 800);
+      setTimeout(() => isRemoteAction = false, 800);
     });
 
     socket.on("drift_check", (data) => {
       if (isHost || !player || typeof player.getCurrentTime !== 'function') return;
-      const localTime = player.getCurrentTime();
-      const hostTime = data.time;
-      const drift = Math.abs(localTime - hostTime);
-      if (drift > 0.5) {
+      if (Math.abs(player.getCurrentTime() - data.time) > 0.5) {
         isRemoteAction = true;
-        player.seekTo(hostTime, true);
+        player.seekTo(data.time, true);
         if (data.is_playing) player.playVideo(); else player.pauseVideo();
-        setTimeout(() => { isRemoteAction = false; }, 800);
+        setTimeout(() => isRemoteAction = false, 800);
       }
     });
 
     setInterval(() => {
       if (isHost && currentRoom && player && typeof player.getCurrentTime === 'function') {
-        socket.emit("host_heartbeat", {
-          room: currentRoom,
-          time: player.getCurrentTime(),
-          is_playing: (player.getPlayerState() === YT.PlayerState.PLAYING)
-        });
+        socket.emit("host_heartbeat", { room: currentRoom, time: player.getCurrentTime(), is_playing: player.getPlayerState() === YT.PlayerState.PLAYING });
       }
     }, 2000);
 
-    loadVideoBtn.addEventListener("click", () => {
-      const url = youtubeUrl.value.trim();
-      let videoId = "";
-      try {
-        const parsed = new URL(url);
-        if (["youtu.be", "www.youtu.be"].includes(parsed.hostname)) {
-          videoId = parsed.pathname.slice(1).split("/")[0];
-        } else if (["youtube.com", "www.youtube.com", "m.youtube.com"].includes(parsed.hostname)) {
-          if (parsed.pathname === "/watch") videoId = parsed.searchParams.get("v") || "";
-          else { const match = parsed.pathname.match(/^\/(embed|shorts)\/([^/]+)/); if (match) videoId = match[2]; }
-        }
-      } catch (e) { videoId = ""; }
+    // --- DANMAKU TIMED COMMENTS OVERLAY ---
+    const danmakuInput = document.getElementById("danmakuInput");
+    const sendDanmakuBtn = document.getElementById("sendDanmakuBtn");
+    const danmakuOverlay = document.getElementById("danmakuOverlay");
 
-      if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) { videoMessage.textContent = "Please enter a valid YouTube video link."; return; }
-      if (!currentRoom) { videoMessage.textContent = "Please create or join a room first!"; return; }
+    function sendDanmaku() {
+      const text = danmakuInput.value.trim();
+      const user = document.getElementById("usernameInput").value.trim() || (isHost ? "Host" : "Guest");
+      if (text && currentRoom && player) {
+        socket.emit("send_timed_comment", { room: currentRoom, text: text, username: user, time: player.getCurrentTime() });
+        danmakuInput.value = "";
+      }
+    }
 
-      socket.emit("change_video", { room: currentRoom, video_id: videoId });
-      videoMessage.textContent = "Updating room video...";
+    sendDanmakuBtn.addEventListener("click", sendDanmaku);
+    danmakuInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendDanmaku(); });
+
+    socket.on("new_timed_comment", (data) => {
+      const el = document.createElement("div");
+      el.className = "danmaku-text text-sm";
+      el.textContent = `${data.username}: ${data.text}`;
+      el.style.top = Math.random() * 70 + 10 + "%";
+      danmakuOverlay.appendChild(el);
+      setTimeout(() => el.remove(), 8000);
     });
 
-    // CHAT SYSTEM
+    // --- PARTY SNAPSHOT GENERATOR ---
+    document.getElementById("snapshotBtn").addEventListener("click", () => {
+      html2canvas(document.getElementById("snapshotTarget")).then(canvas => {
+        const link = document.createElement("a");
+        link.download = `VelvetWatch_Party_${currentRoom || 'Session'}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      });
+    });
+
+    // --- LOUNGE CHAT ---
     const chatInput = document.getElementById("chatInput");
     const sendChatBtn = document.getElementById("sendChatBtn");
     const chatMessages = document.getElementById("chatMessages");
 
-    function sendChatMessage() {
+    sendChatBtn.addEventListener("click", () => {
       const msg = chatInput.value.trim();
-      const customName = usernameInput.value.trim();
-      const finalUsername = customName || (isHost ? "Host" : "Guest");
+      const user = document.getElementById("usernameInput").value.trim() || (isHost ? "Host" : "Guest");
       if (msg && currentRoom) {
-        socket.emit("send_chat", { room: currentRoom, message: msg, username: finalUsername });
+        socket.emit("send_chat", { room: currentRoom, message: msg, username: user });
         chatInput.value = "";
       }
-    }
-
-    sendChatBtn.addEventListener("click", sendChatMessage);
-    chatInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendChatMessage(); });
+    });
 
     socket.on("chat_message", (data) => {
-      const msgEl = document.createElement("div");
-      msgEl.className = "bg-[#121212] p-2.5 rounded-xl border border-[#282828]";
-      msgEl.innerHTML = `<span class="font-bold text-[#E50914]">${data.username}:</span> <span class="text-white">${data.message}</span>`;
-      chatMessages.appendChild(msgEl);
+      const el = document.createElement("div");
+      el.className = "bg-[#121212] p-2 rounded-xl border border-[#282828]";
+      el.innerHTML = `<span class="font-bold text-[#E50914]">${data.username}:</span> ${data.message}`;
+      chatMessages.appendChild(el);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     });
 
-    // REACTION EMOJIS
-    const reactionBtns = document.querySelectorAll(".reaction-btn");
-    const emojiOverlay = document.getElementById("emojiOverlay");
-
-    reactionBtns.forEach(btn => {
+    // --- REACTION EMOJIS ---
+    document.querySelectorAll(".reaction-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         if (currentRoom) socket.emit("send_reaction", { room: currentRoom, emoji: btn.textContent });
       });
     });
 
     socket.on("floating_emoji", (data) => {
-      const emojiEl = document.createElement("div");
-      emojiEl.className = "emoji-float text-3xl";
-      emojiEl.textContent = data.emoji;
-      emojiEl.style.left = Math.random() * 80 + 10 + "%";
-      emojiEl.style.bottom = "10px";
-      emojiOverlay.appendChild(emojiEl);
-      setTimeout(() => emojiEl.remove(), 2000);
+      const el = document.createElement("div");
+      el.className = "emoji-float text-3xl";
+      el.textContent = data.emoji;
+      el.style.left = Math.random() * 80 + 10 + "%";
+      el.style.bottom = "10px";
+      document.getElementById("emojiOverlay").appendChild(el);
+      setTimeout(() => el.remove(), 2000);
     });
 
-    // DYNAMIC LIVE YOUTUBE API SEARCH
-    const searchMovieInput = document.getElementById("searchMovieInput");
-    const apiSearchBtn = document.getElementById("apiSearchBtn");
+    // --- FUZZY SEARCH ---
+    const mockMovies = [
+      { id: "Pw-Tr25wSyk", title: "Avatar: Way of Water", poster: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=300&q=80" },
+      { id: "L61p2uyiMSo", title: "The Dark Knight", poster: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=300&q=80" },
+      { id: "YoHD9XEInc0", title: "Inception", poster: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=300&q=80" }
+    ];
+
+    const fuse = new Fuse(mockMovies, { keys: ["title"], threshold: 0.4 });
     const movieGrid = document.getElementById("movieGrid");
 
-    async function searchYouTubeAPI(query) {
-      if (!query) return;
-      movieGrid.innerHTML = `<p class="text-[#B3B3B3] text-xs col-span-3 text-center py-4">Searching YouTube...</p>`;
-
-      if (YOUTUBE_API_KEY === "YOUR_API_KEY_HERE") {
-        movieGrid.innerHTML = `<p class="text-[#E50914] text-xs col-span-3 text-center py-4">Please insert your YouTube API key into public/index.html!</p>`;
-        return;
-      }
-
-      try {
-        const response = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=6&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`);
-        const data = await response.json();
-
-        if (!data.items || data.items.length === 0) {
-          movieGrid.innerHTML = `<p class="text-[#B3B3B3] text-xs col-span-3 text-center py-4">No results found on YouTube.</p>`;
-          return;
-        }
-
-        movieGrid.innerHTML = "";
-        data.items.forEach(item => {
-          const videoId = item.id.videoId;
-          const title = item.snippet.title;
-          const channel = item.snippet.channelTitle;
-          const poster = item.snippet.thumbnails.medium.url;
-
-          const card = document.createElement("div");
-          card.className = "group relative bg-[#121212] rounded-xl border border-[#282828] overflow-hidden cursor-pointer hover:border-[#E50914] transition-all text-xs";
-          card.innerHTML = `
-            <div class="aspect-video w-full overflow-hidden bg-[#121212]">
-              <img src="${poster}" alt="${title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-            </div>
-            <div class="p-2.5">
-              <p class="font-bold text-white truncate">${title}</p>
-              <p class="text-[10px] text-[#B3B3B3] mt-0.5">${channel}</p>
-            </div>
-          `;
-          card.addEventListener("click", () => {
-            if (currentRoom) {
-              socket.emit("change_video", { room: currentRoom, video_id: videoId });
-            } else {
-              videoMessage.textContent = "Please create or join a room first!";
-            }
-          });
-          movieGrid.appendChild(card);
+    function renderMovies(list) {
+      movieGrid.innerHTML = "";
+      list.forEach(m => {
+        const item = document.createElement("div");
+        item.className = "bg-[#121212] rounded-xl overflow-hidden border border-[#282828] cursor-pointer hover:border-[#E50914]";
+        item.innerHTML = `<img src="${m.poster}" class="w-full aspect-video object-cover" /><p class="p-1 text-[10px] font-bold truncate">${m.title}</p>`;
+        item.addEventListener("click", () => {
+          if (currentRoom) socket.emit("change_video", { room: currentRoom, video_id: m.id });
         });
-
-      } catch (err) {
-        movieGrid.innerHTML = `<p class="text-[#E50914] text-xs col-span-3 text-center py-4">Error fetching YouTube search results.</p>`;
-      }
+        movieGrid.appendChild(item);
+      });
     }
 
-    apiSearchBtn.addEventListener("click", () => searchYouTubeAPI(searchMovieInput.value.trim()));
-    searchMovieInput.addEventListener("keypress", (e) => { if (e.key === "Enter") searchYouTubeAPI(searchMovieInput.value.trim()); });
+    renderMovies(mockMovies);
+    document.getElementById("searchMovieInput").addEventListener("input", (e) => {
+      const q = e.target.value.trim();
+      renderMovies(q ? fuse.search(q).map(r => r.item) : mockMovies);
+    });
   </script>
 </body>
 </html>
