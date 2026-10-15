@@ -1,174 +1,276 @@
+import secrets
+import string
+from pathlib import Path
+
 import socketio
+import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-import uvicorn
-import random, string
 
-sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
+BASE = Path(__file__).resolve().parent
+PUBLIC = BASE / "public"
+
 app = FastAPI()
+sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 
-# In-memory storage for active rooms
 rooms = {}
+sid_rooms = {}
+
+ALLOWED_EMOJIS = ["❤️", "🔥", "😭", "😮", "💀", "😂", "👏", "🎉"]
+
+
+def make_code():
+    chars = string.ascii_uppercase + string.digits
+    return "".join(secrets.choice(chars) for _ in range(6))
+
+
+def snapshot(code):
+    r = rooms[code]
+    poll = None
+    if r["poll"]:
+        poll = {"question": r["poll"]["question"], "options": r["poll"]["options"]}
+    return {
+        "code": code,
+        "host": r["host"],
+        "video_id": r["video_id"],
+        "playlist": r["playlist"],
+        "poll": poll,
+        "members": [
+            {"id": sid, "name": m["name"], "host": sid == r["host"]}
+            for sid, m in r["members"].items()
+        ],
+    }
+
+
+async def update_snapshot(code):
+    if code in rooms:
+        await sio.emit("room_snapshot", snapshot(code), room=code)
+
+
+async def remove_from_room(sid, code):
+    """Remove a user from a room, promote a new host if needed."""
+    if code not in rooms:
+        return
+    r = rooms[code]
+    r["members"].pop(sid, None)
+    await sio.leave_room(sid, code)
+    if not r["members"]:
+        del rooms[code]
+        return
+    if r["host"] == sid:
+        r["host"] = next(iter(r["members"]))
+        await sio.emit("notice", "The host left; a new host was selected.", room=code)
+    await update_snapshot(code)
+
 
 @sio.event
 async def connect(sid, environ):
     print(f"Client connected: {sid}")
 
-@sio.event
-async def disconnect(sid):
-    print(f"Client disconnected: {sid}")
-    for code, room in list(rooms.items()):
-        if sid in room["members"]:
-            del room["members"][sid]
-            # Notify peer disconnect for WebRTC cleanup
-            await sio.emit("user_left_webrtc", {"sid": sid}, room=code)
-            
-            if not room["members"]:
-                del rooms[code]
-            else:
-                if room["host_sid"] == sid:
-                    new_host_sid = next(iter(room["members"]))
-                    room["host_sid"] = new_host_sid
-                    room["members"][new_host_sid]["is_host"] = True
-                    await sio.emit("host_changed", {"new_host_sid": new_host_sid}, room=code)
-                await update_room_members(code)
 
 @sio.event
 async def create_room(sid, data=None):
-    room_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-    
-    rooms[room_code] = {
-        "host_sid": sid,
-        "members": {sid: {"username": "Host", "is_host": True}},
-        "video_id": "Pw-Tr25wSyk",
+    data = data or {}
+
+    # leave any previous room first
+    old = sid_rooms.pop(sid, None)
+    if old:
+        await remove_from_room(sid, old)
+
+    code = make_code()
+    while code in rooms:
+        code = make_code()
+
+    await sio.enter_room(sid, code)
+    sid_rooms[sid] = code
+    rooms[code] = {
+        "host": sid,
+        "members": {sid: {"name": str(data.get("username") or "Host")[:24]}},
+        "video_id": None,
         "time": 0,
-        "is_playing": False,
-        "timed_comments": []
+        "playing": False,
+        "playlist": [],
+        "poll": None,
     }
-    
-    sio.enter_room(sid, room_code)
-    await sio.emit("room_created", {"room": room_code}, to=sid)
-    await update_room_members(room_code)
+    await sio.emit("room_created", {"code": code}, to=sid)
+    await update_snapshot(code)
+
 
 @sio.event
-async def join_room(sid, data):
-    code = data.get("room", "").strip().upper()
-    username = data.get("username", "Guest").strip() or "Guest"
-
+async def join_room(sid, data=None):
+    data = data or {}
+    code = str(data.get("code", "")).strip().upper()
     if code not in rooms:
-        await sio.emit("room_error", {"message": "Invalid room code!"}, to=sid)
+        await sio.emit("room_error", "Room code not found. Check the code and try again.", to=sid)
+        return
+    if sid in rooms[code]["members"]:
+        await sio.emit("room_joined", {"code": code, "host": rooms[code]["host"] == sid}, to=sid)
+        await update_snapshot(code)
+        return
+    if len(rooms[code]["members"]) >= 10:
+        await sio.emit("room_error", "This room is full (10 people maximum).", to=sid)
         return
 
-    room = rooms[code]
-    is_host = (sid == room["host_sid"])
-    
-    # Existing member IDs for WebRTC mesh signaling
-    existing_peers = list(room["members"].keys())
-    
-    room["members"][sid] = {"username": username, "is_host": is_host}
-    sio.enter_room(sid, code)
-    
-    await sio.emit("room_joined", {
-        "room": code,
-        "is_host": is_host,
-        "video_id": room["video_id"],
-        "current_time": room["time"],
-        "is_playing": room["is_playing"],
-        "existing_peers": existing_peers,
-        "timed_comments": room["timed_comments"]
-    }, to=sid)
+    old = sid_rooms.pop(sid, None)
+    if old and old != code:
+        await remove_from_room(sid, old)
 
-    # Notify existing peers that a new WebRTC participant joined
-    await sio.emit("user_joined_webrtc", {"sid": sid, "username": username}, room=code, skip_sid=sid)
-    await update_room_members(code)
+    await sio.enter_room(sid, code)
+    sid_rooms[sid] = code
+    rooms[code]["members"][sid] = {"name": str(data.get("username") or "Guest")[:24]}
 
-# --- WEBRTC PEER-TO-PEER SIGNALING ---
-@sio.event
-async def webrtc_offer(sid, data):
-    await sio.emit("webrtc_offer", {"offer": data["offer"], "sender_sid": sid}, to=data["target_sid"])
+    await sio.emit("room_joined", {"code": code, "host": rooms[code]["host"] == sid}, to=sid)
+    await update_snapshot(code)
+
+    r = rooms[code]
+    if r["video_id"]:
+        await sio.emit(
+            "video_changed",
+            {"video_id": r["video_id"], "time": r["time"], "playing": r["playing"]},
+            to=sid,
+        )
+
 
 @sio.event
-async def webrtc_answer(sid, data):
-    await sio.emit("webrtc_answer", {"answer": data["answer"], "sender_sid": sid}, to=data["target_sid"])
+async def disconnect(sid):
+    print(f"Client disconnected: {sid}")
+    code = sid_rooms.pop(sid, None)
+    if code:
+        await remove_from_room(sid, code)
+
 
 @sio.event
-async def webrtc_ice_candidate(sid, data):
-    await sio.emit("webrtc_ice_candidate", {"candidate": data["candidate"], "sender_sid": sid}, to=data["target_sid"])
+async def change_video(sid, data=None):
+    code = sid_rooms.get(sid)
+    if not code or code not in rooms:
+        await sio.emit("room_error", "Create or join a room before loading a video.", to=sid)
+        return
+    video_id = str((data or {}).get("video_id", "")).strip()
+    if not video_id or len(video_id) > 20:
+        await sio.emit("room_error", "That YouTube video ID looks invalid.", to=sid)
+        return
+    r = rooms[code]
+    r.update(video_id=video_id, time=0, playing=True)
+    await sio.emit("video_changed", {"video_id": video_id, "time": 0, "playing": True}, room=code)
+    await update_snapshot(code)
 
-# --- PLAYBACK & DRIFT SYNC ---
-@sio.event
-async def sync_action(sid, data):
-    room_code = data.get("room")
-    action = data.get("action")
-    time = data.get("time", 0)
-
-    if room_code in rooms:
-        rooms[room_code]["time"] = time
-        rooms[room_code]["is_playing"] = (action == "play")
-        await sio.emit("sync_action", {"action": action, "time": time}, room=room_code, skip_sid=sid)
-
-@sio.event
-async def host_heartbeat(sid, data):
-    room_code = data.get("room")
-    time = data.get("time", 0)
-    is_playing = data.get("is_playing", False)
-
-    if room_code in rooms and rooms[room_code]["host_sid"] == sid:
-        rooms[room_code]["time"] = time
-        rooms[room_code]["is_playing"] = is_playing
-        await sio.emit("drift_check", {"time": time, "is_playing": is_playing}, room=room_code, skip_sid=sid)
 
 @sio.event
-async def change_video(sid, data):
-    room_code = data.get("room")
-    video_id = data.get("video_id")
+async def playback_update(sid, data=None):
+    code = sid_rooms.get(sid)
+    if not code or code not in rooms or sid != rooms[code]["host"]:
+        return
+    data = data or {}
+    try:
+        rooms[code]["time"] = max(0, float(data.get("time", 0)))
+    except (TypeError, ValueError):
+        return
+    rooms[code]["playing"] = bool(data.get("playing", False))
+    await sio.emit(
+        "playback_update",
+        {"time": rooms[code]["time"], "playing": rooms[code]["playing"]},
+        room=code,
+        skip_sid=sid,
+    )
 
-    if room_code in rooms:
-        rooms[room_code]["video_id"] = video_id
-        rooms[room_code]["time"] = 0
-        rooms[room_code]["is_playing"] = True
-        await sio.emit("video_changed", {"video_id": video_id}, room=room_code)
 
 @sio.event
-async def send_chat(sid, data):
-    room_code = data.get("room")
-    message = data.get("message")
-    username = data.get("username", "User")
+async def chat_message(sid, data=None):
+    code = sid_rooms.get(sid)
+    if not code or code not in rooms:
+        await sio.emit("room_error", "Join a room before chatting.", to=sid)
+        return
+    message = str((data or {}).get("message", "")).strip()[:500]
+    if message:
+        name = rooms[code]["members"].get(sid, {}).get("name", "Guest")
+        await sio.emit("chat_message", {"name": name, "message": message}, room=code)
 
-    if room_code in rooms:
-        await sio.emit("chat_message", {"username": username, "message": message}, room=room_code)
 
-# --- TIMED DANMAKU COMMENTS ---
 @sio.event
-async def send_timed_comment(sid, data):
-    room_code = data.get("room")
-    comment_data = {
-        "username": data.get("username", "User"),
-        "text": data.get("text"),
-        "time": data.get("time", 0)
+async def reaction(sid, data=None):
+    code = sid_rooms.get(sid)
+    if code in rooms:
+        emoji = str((data or {}).get("emoji", "❤️"))
+        if emoji not in ALLOWED_EMOJIS:
+            emoji = "❤️"
+        await sio.emit("reaction", {"emoji": emoji}, room=code)
+
+
+@sio.event
+async def add_to_playlist(sid, data=None):
+    code = sid_rooms.get(sid)
+    if code not in rooms:
+        return
+    item = (data or {}).get("item") or {}
+    video_id = str(item.get("id", "")).strip()
+    if not video_id or len(video_id) > 20:
+        return
+    rooms[code]["playlist"].append({
+        "id": video_id,
+        "title": str(item.get("title", "Untitled"))[:80],
+        "poster": str(item.get("poster", ""))[:300],
+    })
+    rooms[code]["playlist"] = rooms[code]["playlist"][-30:]
+    await update_snapshot(code)
+
+
+@sio.event
+async def create_poll(sid, data=None):
+    code = sid_rooms.get(sid)
+    if code not in rooms:
+        return
+    data = data or {}
+    question = str(data.get("question", "")).strip()[:120]
+    options = [str(o).strip()[:60] for o in (data.get("options") or []) if str(o).strip()]
+    if not question or len(options) < 2:
+        return
+    rooms[code]["poll"] = {
+        "question": question,
+        "options": [{"text": o, "votes": 0} for o in options[:6]],
+        "voted": set(),
     }
-    if room_code in rooms:
-        rooms[room_code]["timed_comments"].append(comment_data)
-        await sio.emit("new_timed_comment", comment_data, room=room_code)
+    await update_snapshot(code)
+
 
 @sio.event
-async def send_reaction(sid, data):
-    room_code = data.get("room")
-    emoji = data.get("emoji")
+async def vote_poll(sid, data=None):
+    code = sid_rooms.get(sid)
+    if code not in rooms:
+        return
+    poll = rooms[code]["poll"]
+    if not poll or sid in poll["voted"]:
+        return
+    try:
+        idx = int((data or {}).get("option_index"))
+    except (TypeError, ValueError):
+        return
+    if 0 <= idx < len(poll["options"]):
+        poll["options"][idx]["votes"] += 1
+        poll["voted"].add(sid)
+        await update_snapshot(code)
 
-    if room_code in rooms:
-        await sio.emit("floating_emoji", {"emoji": emoji}, room=room_code)
 
-async def update_room_members(room_code):
-    if room_code in rooms:
-        members_list = [
-            {"sid": m_sid, "username": m_info["username"], "is_host": m_info["is_host"]}
-            for m_sid, m_info in rooms[room_code]["members"].items()
-        ]
-        await sio.emit("members_updated", {"members": members_list}, room=room_code)
+@sio.event
+async def transfer_host(sid, data=None):
+    code = sid_rooms.get(sid)
+    if code not in rooms or rooms[code]["host"] != sid:
+        return
+    target = (data or {}).get("target")
+    if target in rooms[code]["members"]:
+        rooms[code]["host"] = target
+        await sio.emit("notice", "Host was transferred.", room=code)
+        await update_snapshot(code)
 
-socket_app = socketio.ASGIApp(sio, app)
-app.mount("/", StaticFiles(directory="public", html=True), name="public")
+
+@sio.event
+async def request_snapshot(sid):
+    code = sid_rooms.get(sid)
+    if code in rooms:
+        await sio.emit("room_snapshot", snapshot(code), to=sid)
+
+
+app.mount("/", StaticFiles(directory=PUBLIC, html=True), name="public")
+socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
 if __name__ == "__main__":
     uvicorn.run(socket_app, host="127.0.0.1", port=8000)

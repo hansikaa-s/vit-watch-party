@@ -6,156 +6,145 @@
   <title>Velvet Watch</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-    body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background-color: #121212;
-      color: #FFFFFF;
-    }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #121212; color: #FFFFFF; }
     @keyframes floatUp {
       0% { transform: translateY(0) scale(1); opacity: 1; }
       100% { transform: translateY(-120px) scale(1.4); opacity: 0; }
     }
-    .emoji-float {
-      position: absolute;
-      animation: floatUp 2s ease-out forwards;
-      pointer-events: none;
-    }
-    @keyframes danmakuSlide {
-      0% { transform: translateX(100%); }
-      100% { transform: translateX(-120%); }
-    }
-    .danmaku-text {
-      position: absolute;
-      white-space: nowrap;
-      font-weight: 800;
-      color: #FFFFFF;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(229,9,20,0.8);
-      animation: danmakuSlide 8s linear forwards;
-      pointer-events: none;
-    }
+    .emoji-float { position: absolute; animation: floatUp 2s ease-out forwards; pointer-events: none; }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #121212; }
     ::-webkit-scrollbar-thumb { background: #282828; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #535353; }
   </style>
 </head>
 
 <body class="min-h-screen p-4 md:p-8 selection:bg-[#E50914] selection:text-white">
-  <main id="snapshotTarget" class="max-w-6xl mx-auto space-y-6">
-    
-    <!-- HEADER NAVBAR -->
-    <header class="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b border-[#282828]">
+  <main class="max-w-6xl mx-auto">
+
+    <header class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 pb-4 border-b border-[#282828]">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-full bg-[#E50914] flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-[#E50914]/25">
-          ▶
-        </div>
+        <div class="w-10 h-10 rounded-full bg-[#E50914] flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-[#E50914]/25">▶</div>
         <div>
           <h1 class="text-2xl font-extrabold tracking-tight text-white flex items-center gap-2">
-            Velvet Watch <span class="text-[10px] bg-[#E50914]/10 text-[#E50914] border border-[#E50914]/30 px-2 py-0.5 rounded-full font-bold uppercase">Pro Lounge</span>
+            Velvet Watch <span class="text-[10px] bg-[#E50914]/10 text-[#E50914] border border-[#E50914]/30 px-2 py-0.5 rounded-full font-bold uppercase">Live Sync</span>
           </h1>
-          <p class="text-xs text-[#B3B3B3]">WebRTC Voice/Video • Danmaku Overlay • Live Sync</p>
+          <p class="text-xs text-[#B3B3B3]">Cozy real-time watch sessions with friends.</p>
         </div>
       </div>
 
-      <!-- CONTROLS -->
-      <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-        <button id="createRoomBtn" class="bg-[#E50914] hover:bg-[#ff0f1a] text-white px-5 py-2.5 rounded-full font-bold text-xs tracking-wider transition-all shadow-lg shadow-[#E50914]/25">
-          Create Room
-        </button>
-
-        <input id="roomCodeInput" type="text" placeholder="ROOM CODE" class="w-28 rounded-full bg-[#181818] border border-[#282828] focus:border-[#E50914] px-3 py-2.5 text-white uppercase font-extrabold text-xs text-center focus:outline-none" />
-
-        <button id="joinRoomBtn" class="bg-[#282828] hover:bg-[#3E3E3E] text-white px-4 py-2.5 rounded-full text-xs font-bold transition-all">
-          Join
-        </button>
-        
-        <button id="snapshotBtn" class="bg-[#282828] hover:bg-[#3E3E3E] text-white px-3 py-2.5 rounded-full text-xs font-bold transition-all">
-          📸 Snapshot
-        </button>
+      <div class="flex items-center gap-2 w-full sm:w-auto">
+        <button id="createRoomBtn" class="bg-[#E50914] hover:bg-[#ff0f1a] text-white px-5 py-2.5 rounded-full font-bold text-xs tracking-wider transition-all shadow-lg shadow-[#E50914]/25 hover:scale-105 active:scale-95 whitespace-nowrap">Create Room</button>
+        <div class="flex gap-2 flex-1 sm:flex-initial">
+          <input id="roomCodeInput" type="text" placeholder="ROOM CODE" maxlength="6" class="w-full sm:w-32 rounded-full bg-[#181818] border border-[#282828] focus:border-[#E50914] px-4 py-2.5 text-white placeholder-[#535353] uppercase tracking-widest font-extrabold text-xs focus:outline-none transition-all" />
+          <button id="joinRoomBtn" class="bg-[#282828] hover:bg-[#3E3E3E] text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all hover:scale-105 active:scale-95">Join</button>
+          <button id="copyInviteBtn" title="Copy Invite Link" class="hidden bg-[#282828] hover:bg-[#3E3E3E] text-white px-3 py-2.5 rounded-full text-xs font-bold transition-all">🔗 Link</button>
+        </div>
       </div>
     </header>
 
-    <p id="statusMessage" class="text-[#E50914] text-xs font-bold text-center min-h-[16px]"></p>
+    <p id="statusMessage" class="text-[#E50914] text-xs font-bold mb-6 text-center min-h-[16px]" aria-live="polite"></p>
 
-    <!-- WEBRTC CAMERA STREAM GRID -->
-    <div id="videoGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#181818] p-3 rounded-2xl border border-[#282828]">
-      <div class="relative aspect-video bg-[#121212] rounded-xl overflow-hidden border border-[#282828]">
-        <video id="localVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
-        <div class="absolute bottom-1 left-1 bg-black/60 px-2 py-0.5 rounded text-[9px] font-bold">You (Local)</div>
-      </div>
-    </div>
-
-    <!-- CAM/MIC TOGGLE BAR -->
-    <div class="flex items-center justify-between bg-[#181818] px-5 py-2.5 rounded-2xl border border-[#282828]">
-      <span class="text-xs font-bold text-[#B3B3B3]">🎙️ WebRTC Voice & Video Lounge</span>
-      <div class="flex gap-2">
-        <button id="toggleCamBtn" class="bg-[#282828] hover:bg-[#3E3E3E] text-white px-3 py-1.5 rounded-xl text-xs font-bold">📷 Start Cam</button>
-        <button id="toggleMicBtn" class="bg-[#282828] hover:bg-[#3E3E3E] text-white px-3 py-1.5 rounded-xl text-xs font-bold">🎙️ Mute</button>
-      </div>
-    </div>
-
-    <!-- MAIN DASHBOARD -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
-      
-      <!-- LEFT 2 COLUMNS: PLAYER & DANMAKU -->
-      <div class="lg:col-span-2 space-y-4">
-        
-        <div class="flex gap-2 bg-[#181818] p-2 rounded-2xl border border-[#282828]">
-          <input id="youtubeUrl" type="url" placeholder="Paste YouTube link..." class="flex-1 rounded-xl bg-[#121212] px-4 py-2 text-white text-xs focus:outline-none focus:border-[#E50914]" />
-          <button id="loadVideoBtn" class="bg-[#E50914] text-white px-5 py-2 rounded-xl font-bold text-xs">Load</button>
+
+      <div class="lg:col-span-2 space-y-5">
+
+        <div class="flex flex-col sm:flex-row gap-2 bg-[#181818] p-2 rounded-2xl border border-[#282828]">
+          <input id="youtubeUrl" type="url" placeholder="Paste a YouTube video link..." class="flex-1 rounded-xl bg-[#121212] border border-transparent px-4 py-2 text-white placeholder-[#535353] focus:outline-none focus:border-[#E50914] text-xs transition-all" />
+          <button id="loadVideoBtn" class="bg-[#E50914] hover:bg-[#ff0f1a] text-white px-5 py-2 rounded-xl font-bold text-xs transition-all hover:scale-105 active:scale-95">Load Video</button>
         </div>
 
-        <!-- VIDEO CONTAINER WITH OVERLAYS -->
-        <div class="relative aspect-video bg-black rounded-2xl overflow-hidden border border-[#282828]">
+        <p id="videoMessage" class="text-[#B3B3B3] text-xs min-h-[16px] px-1"></p>
+
+        <div class="relative aspect-video bg-black rounded-2xl overflow-hidden border border-[#282828] shadow-2xl shadow-red-950/20">
           <div id="youtubePlayer" class="w-full h-full"></div>
           <div id="emojiOverlay" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
-          <div id="danmakuOverlay" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
         </div>
 
-        <!-- TIMED COMMENT INPUT BAR -->
-        <div class="flex gap-2 bg-[#181818] p-2 rounded-2xl border border-[#282828]">
-          <input id="danmakuInput" type="text" placeholder="Send timed Danmaku comment over video..." class="flex-1 bg-[#121212] px-3 py-1.5 rounded-xl text-xs text-white focus:outline-none" />
-          <button id="sendDanmakuBtn" class="bg-[#E50914] text-white px-4 py-1.5 rounded-xl text-xs font-bold">Send Danmaku</button>
-        </div>
-
-        <!-- REACTION EMOJIS -->
         <div class="flex items-center justify-between bg-[#181818] px-5 py-3 rounded-2xl border border-[#282828]">
-          <span class="text-xs text-[#B3B3B3] font-bold uppercase">Reactions</span>
+          <span class="text-[11px] text-[#B3B3B3] font-bold uppercase tracking-wider">Reactions</span>
           <div class="flex gap-4">
-            <button class="reaction-btn text-xl hover:scale-125 transition-transform">❤️</button>
-            <button class="reaction-btn text-xl hover:scale-125 transition-transform">🔥</button>
-            <button class="reaction-btn text-xl hover:scale-125 transition-transform">😭</button>
-            <button class="reaction-btn text-xl hover:scale-125 transition-transform">😮</button>
-            <button class="reaction-btn text-xl hover:scale-125 transition-transform">💀</button>
+            <button class="reaction-btn text-xl hover:scale-125 transition-transform active:scale-90">❤️</button>
+            <button class="reaction-btn text-xl hover:scale-125 transition-transform active:scale-90">🔥</button>
+            <button class="reaction-btn text-xl hover:scale-125 transition-transform active:scale-90">😭</button>
+            <button class="reaction-btn text-xl hover:scale-125 transition-transform active:scale-90">😮</button>
+            <button class="reaction-btn text-xl hover:scale-125 transition-transform active:scale-90">💀</button>
           </div>
         </div>
 
-        <!-- FUZZY SEARCH MOVIE GRID -->
-        <div class="bg-[#181818] p-4 rounded-2xl border border-[#282828] space-y-3">
-          <h3 class="text-xs font-bold uppercase tracking-wider">🎬 Shared Movie Discovery</h3>
-          <input id="searchMovieInput" type="text" placeholder="Fuzzy search titles..." class="w-full rounded-xl bg-[#121212] border border-[#282828] px-3 py-2 text-xs text-white focus:outline-none" />
-          <div id="movieGrid" class="grid grid-cols-3 gap-2 max-h-52 overflow-y-auto"></div>
-        </div>
+        <div class="bg-[#181818] p-5 rounded-2xl border border-[#282828] space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h3 class="text-xs font-bold text-white uppercase tracking-wider">🎬 Shared Movie Discovery</h3>
+            <span class="text-[10px] text-[#E50914] font-bold bg-[#121212] px-3 py-1 rounded-full border border-[#E50914]/20 self-start sm:self-auto">Fuse.js Fuzzy Search</span>
+          </div>
 
-      </div>
+          <div id="categoryPills" class="flex flex-wrap gap-2 text-xs">
+            <button data-cat="All" class="cat-pill bg-[#E50914] text-white px-3 py-1 rounded-full font-bold">All</button>
+            <button data-cat="Action" class="cat-pill bg-[#121212] text-[#B3B3B3] hover:text-white px-3 py-1 rounded-full font-semibold border border-[#282828]">Action</button>
+            <button data-cat="Sci-Fi" class="cat-pill bg-[#121212] text-[#B3B3B3] hover:text-white px-3 py-1 rounded-full font-semibold border border-[#282828]">Sci-Fi</button>
+            <button data-cat="Drama" class="cat-pill bg-[#121212] text-[#B3B3B3] hover:text-white px-3 py-1 rounded-full font-semibold border border-[#282828]">Drama</button>
+            <button data-cat="Animation" class="cat-pill bg-[#121212] text-[#B3B3B3] hover:text-white px-3 py-1 rounded-full font-semibold border border-[#282828]">Animation</button>
+          </div>
 
-      <!-- RIGHT COLUMN: CHAT SIDEBAR -->
-      <div class="bg-[#181818] p-4 rounded-2xl border border-[#282828] flex flex-col h-[580px]">
-        <span class="text-xs font-bold uppercase pb-2 border-b border-[#282828]">💬 Lounge Chat</span>
-        
-        <input id="usernameInput" type="text" placeholder="Your display name..." class="my-3 rounded-xl bg-[#121212] border border-[#282828] px-3 py-1.5 text-xs text-white font-semibold focus:outline-none" />
+          <input id="searchMovieInput" type="text" placeholder="Type any movie title, year, or genre (fuzzy search)..." class="w-full rounded-xl bg-[#121212] border border-[#282828] px-3.5 py-2 text-xs text-white placeholder-[#535353] focus:outline-none focus:border-[#E50914] transition-all" />
 
-        <div id="chatMessages" class="flex-1 overflow-y-auto space-y-2 text-xs pr-1 mb-3"></div>
-
-        <div class="flex gap-2 pt-2 border-t border-[#282828]">
-          <input id="chatInput" type="text" placeholder="Message..." class="flex-1 rounded-xl bg-[#121212] border border-[#282828] px-3 py-2 text-xs text-white focus:outline-none" />
-          <button id="sendChatBtn" class="bg-[#E50914] text-white px-4 py-2 rounded-xl text-xs font-bold">Send</button>
+          <div id="movieGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-64 overflow-y-auto pr-1"></div>
         </div>
       </div>
 
+      <div class="bg-[#181818] p-4 rounded-2xl border border-[#282828] flex flex-col h-[650px]">
+
+        <div class="flex border-b border-[#282828] mb-3 pb-2 gap-2 text-xs font-bold">
+          <button id="tabChat" class="text-[#E50914] border-b-2 border-[#E50914] pb-1 px-1">💬 Chat</button>
+          <button id="tabPolls" class="text-[#B3B3B3] hover:text-white pb-1 px-1">📊 Polls</button>
+          <button id="tabQueue" class="text-[#B3B3B3] hover:text-white pb-1 px-1">🎵 Queue</button>
+          <button id="tabUsers" class="text-[#B3B3B3] hover:text-white pb-1 px-1">👥 Users</button>
+        </div>
+
+        <div class="mb-3">
+          <input id="usernameInput" type="text" maxlength="24" placeholder="Your display name (set before create/join)..." class="w-full rounded-xl bg-[#121212] border border-[#282828] focus:border-[#E50914] px-3 py-1.5 text-xs text-white placeholder-[#535353] focus:outline-none transition-all font-semibold" />
+        </div>
+
+        <div id="panelChat" class="flex-1 flex flex-col min-h-0">
+          <div id="chatMessages" class="flex-1 overflow-y-auto space-y-2.5 text-xs pr-1 mb-3">
+            <p class="text-[#535353] italic text-center py-6">Connected to the lounge. Say hi!</p>
+          </div>
+          <div class="flex gap-2 pt-2 border-t border-[#282828]">
+            <input id="chatInput" type="text" placeholder="Type a message..." class="flex-1 rounded-xl bg-[#121212] border border-[#282828] px-3 py-2 text-xs text-white placeholder-[#535353] focus:outline-none focus:border-[#E50914]" />
+            <button id="sendChatBtn" class="bg-[#E50914] hover:bg-[#ff0f1a] text-white px-4 py-2 rounded-xl text-xs font-bold">Send</button>
+          </div>
+        </div>
+
+        <div id="panelPolls" class="hidden flex-1 flex flex-col min-h-0 space-y-3">
+          <div id="pollContainer" class="flex-1 overflow-y-auto text-xs space-y-2">
+            <p class="text-[#535353] italic text-center py-6">No active group poll right now.</p>
+          </div>
+          <div id="createPollSection" class="pt-2 border-t border-[#282828] space-y-2">
+            <input id="pollQuestion" type="text" placeholder="Poll question (e.g., Which movie next?)" class="w-full bg-[#121212] border border-[#282828] p-2 text-xs rounded-xl focus:outline-none focus:border-[#E50914]" />
+            <input id="pollOpt1" type="text" placeholder="Option 1" class="w-full bg-[#121212] border border-[#282828] p-2 text-xs rounded-xl focus:outline-none" />
+            <input id="pollOpt2" type="text" placeholder="Option 2" class="w-full bg-[#121212] border border-[#282828] p-2 text-xs rounded-xl focus:outline-none" />
+            <button id="startPollBtn" class="w-full bg-[#E50914] text-white py-1.5 text-xs font-bold rounded-xl">Create Poll</button>
+          </div>
+        </div>
+
+        <div id="panelQueue" class="hidden flex-1 flex flex-col min-h-0">
+          <div id="playlistGrid" class="flex-1 overflow-y-auto space-y-2 text-xs pr-1">
+            <p class="text-[#535353] italic text-center py-6">Queue is empty. Click "+ Queue" on movie cards to add!</p>
+          </div>
+        </div>
+
+        <div id="panelUsers" class="hidden flex-1 flex flex-col min-h-0">
+          <div id="userList" class="flex-1 overflow-y-auto space-y-2 text-xs pr-1"></div>
+        </div>
+
+      </div>
     </div>
+
+    <footer class="mt-8 rounded-2xl border border-[#282828] bg-[#181818] p-4 text-center">
+      <p class="text-[#E50914] text-xs font-bold tracking-widest uppercase">✓ Real-Time Sync Engine Active (&le;500ms Drift Auto-Correction)</p>
+    </footer>
   </main>
 
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
@@ -164,271 +153,417 @@
   <script>
     const socket = io();
 
-    let player;
+    let player = null;
+    let playerReady = false;
+    let pendingVideo = null;      // video to load once the YT player is ready
     let isHost = false;
     let currentRoom = "";
     let isRemoteAction = false;
-    let localStream = null;
-    const peerConnections = {};
+    let activeCategory = "All";
+    let hasVoted = false;
+    let lastPollKey = "";
 
-    const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+    const $ = (id) => document.getElementById(id);
+    const createBtn = $("createRoomBtn");
+    const joinBtn = $("joinRoomBtn");
+    const roomInput = $("roomCodeInput");
+    const copyInviteBtn = $("copyInviteBtn");
+    const status = $("statusMessage");
+    const youtubeUrl = $("youtubeUrl");
+    const loadVideoBtn = $("loadVideoBtn");
+    const videoMessage = $("videoMessage");
+    const usernameInput = $("usernameInput");
 
-    const localVideo = document.getElementById("localVideo");
-    const videoGrid = document.getElementById("videoGrid");
-    const toggleCamBtn = document.getElementById("toggleCamBtn");
-    const toggleMicBtn = document.getElementById("toggleMicBtn");
-
-    // --- WEBRTC CAMERA / MIC SETUP ---
-    toggleCamBtn.addEventListener("click", async () => {
-      if (!localStream) {
-        try {
-          localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-          localVideo.srcObject = localStream;
-          toggleCamBtn.textContent = "📷 Stop Cam";
-          toggleCamBtn.classList.replace("bg-[#282828]", "bg-[#E50914]");
-        } catch (err) {
-          alert("Camera/Mic permission denied or not available.");
-        }
-      } else {
-        localStream.getTracks().forEach(track => track.stop());
-        localStream = null;
-        localVideo.srcObject = null;
-        toggleCamBtn.textContent = "📷 Start Cam";
-        toggleCamBtn.classList.replace("bg-[#E50914]", "bg-[#282828]");
-      }
-    });
-
-    async function createPeerConnection(targetSid) {
-      const pc = new RTCPeerConnection(rtcConfig);
-      peerConnections[targetSid] = pc;
-
-      if (localStream) {
-        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-      }
-
-      pc.ontrack = (event) => {
-        let remoteVid = document.getElementById(`vid_${targetSid}`);
-        if (!remoteVid) {
-          const wrapper = document.createElement("div");
-          wrapper.id = `wrap_${targetSid}`;
-          wrapper.className = "relative aspect-video bg-[#121212] rounded-xl overflow-hidden border border-[#282828]";
-          wrapper.innerHTML = `<video id="vid_${targetSid}" autoplay playsinline class="w-full h-full object-cover"></video>`;
-          videoGrid.appendChild(wrapper);
-          remoteVid = wrapper.querySelector("video");
-        }
-        remoteVid.srcObject = event.streams[0];
-      };
-
-      pc.onicecandidate = (event) => {
-        if (event.candidate) {
-          socket.emit("webrtc_ice_candidate", { target_sid: targetSid, candidate: event.candidate });
-        }
-      };
-
-      return pc;
+    // Escape user-provided text before putting it in innerHTML (prevents XSS)
+    function esc(str) {
+      const d = document.createElement("div");
+      d.textContent = String(str ?? "");
+      return d.innerHTML;
     }
 
-    socket.on("user_joined_webrtc", async (data) => {
-      const pc = await createPeerConnection(data.sid);
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      socket.emit("webrtc_offer", { target_sid: data.sid, offer: offer });
-    });
+    function remoteGuard(ms = 1000) {
+      isRemoteAction = true;
+      setTimeout(() => { isRemoteAction = false; }, ms);
+    }
 
-    socket.on("webrtc_offer", async (data) => {
-      const pc = await createPeerConnection(data.sender_sid);
-      await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      socket.emit("webrtc_answer", { target_sid: data.sender_sid, answer: answer });
-    });
-
-    socket.on("webrtc_answer", async (data) => {
-      const pc = peerConnections[data.sender_sid];
-      if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-    });
-
-    socket.on("webrtc_ice_candidate", async (data) => {
-      const pc = peerConnections[data.sender_sid];
-      if (pc) await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-    });
-
-    socket.on("user_left_webrtc", (data) => {
-      if (peerConnections[data.sid]) {
-        peerConnections[data.sid].close();
-        delete peerConnections[data.sid];
+    // ?room=CODE in URL
+    window.addEventListener("DOMContentLoaded", () => {
+      const roomParam = new URLSearchParams(window.location.search).get("room");
+      if (roomParam) {
+        roomInput.value = roomParam.toUpperCase();
+        status.textContent = "Click 'Join' to enter room " + roomParam.toUpperCase();
       }
-      const wrap = document.getElementById(`wrap_${data.sid}`);
-      if (wrap) wrap.remove();
     });
 
-    // --- YOUTUBE PLAYER & SYNC ENGINE ---
+    socket.on("connect_error", () => { status.textContent = "Cannot reach the server. Is it running?"; });
+
+    // ---------- YOUTUBE PLAYER ----------
     function onYouTubeIframeAPIReady() {
-      player = new YT.Player('youtubePlayer', {
-        videoId: 'Pw-Tr25wSyk',
-        playerVars: { 'playsinline': 1, 'controls': 1 },
-        events: { 'onStateChange': onPlayerStateChange }
+      player = new YT.Player("youtubePlayer", {
+        videoId: "Pw-Tr25wSyk",
+        playerVars: { playsinline: 1, controls: 1, modestbranding: 1 },
+        events: {
+          onReady: () => {
+            playerReady = true;
+            if (pendingVideo) { applyVideo(pendingVideo); pendingVideo = null; }
+          },
+          onStateChange: onPlayerStateChange,
+          onError: (e) => {
+            videoMessage.textContent = "This video can't be played (error " + e.data + "). It may be private or have embedding disabled. Try another one.";
+          }
+        }
       });
+    }
+    window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+
+    function applyVideo(data) {
+      if (!playerReady) { pendingVideo = data; return; }
+      remoteGuard(1200);
+      player.loadVideoById(data.video_id, data.time || 0);
+      if (data.playing === false && (data.time || 0) > 0) {
+        // late joiner entering a room whose video is paused
+        setTimeout(() => player.pauseVideo(), 800);
+      }
     }
 
     function onPlayerStateChange(event) {
-      if (isRemoteAction || !currentRoom) return;
-      const time = player.getCurrentTime();
-      if (event.data === YT.PlayerState.PLAYING) socket.emit("sync_action", { room: currentRoom, action: "play", time: time });
-      else if (event.data === YT.PlayerState.PAUSED) socket.emit("sync_action", { room: currentRoom, action: "pause", time: time });
+      if (isRemoteAction || !currentRoom || !isHost) return;
+      if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.PAUSED) {
+        sendPlayback();
+      }
     }
 
-    document.getElementById("createRoomBtn").addEventListener("click", () => socket.emit("create_room"));
-    document.getElementById("joinRoomBtn").addEventListener("click", () => {
-      const code = document.getElementById("roomCodeInput").value.trim().toUpperCase();
-      const user = document.getElementById("usernameInput").value.trim() || "Guest";
-      if (code) socket.emit("join_room", { room: code, username: user });
+    function sendPlayback() {
+      if (!playerReady || !isHost || !currentRoom) return;
+      const st = player.getPlayerState();
+      if (st === YT.PlayerState.UNSTARTED || st === YT.PlayerState.CUED) return;
+      socket.emit("playback_update", {
+        time: player.getCurrentTime(),
+        // buffering counts as playing, otherwise viewers get paused mid-load
+        playing: st === YT.PlayerState.PLAYING || st === YT.PlayerState.BUFFERING
+      });
+    }
+
+    // Host heartbeat every 2s so viewers can drift-correct
+    setInterval(sendPlayback, 2000);
+
+    // Viewers: apply host updates, correct drift > 0.5s
+    socket.on("playback_update", (data) => {
+      if (isHost || !playerReady) return;
+      const drift = Math.abs(player.getCurrentTime() - data.time);
+      const state = player.getPlayerState();
+      const isPlaying = state === YT.PlayerState.PLAYING;
+
+      remoteGuard(800);
+      if (drift > 0.5) player.seekTo(data.time, true);
+      if (data.playing && !isPlaying) player.playVideo();
+      else if (!data.playing && isPlaying) player.pauseVideo();
+    });
+
+    socket.on("video_changed", (data) => {
+      applyVideo(data);
+      videoMessage.textContent = "Room video updated!";
+    });
+
+    // ---------- ROOMS ----------
+    function myName(fallback) { return usernameInput.value.trim() || fallback; }
+
+    createBtn.addEventListener("click", () => {
+      socket.emit("create_room", { username: myName("Host") });
+    });
+
+    joinBtn.addEventListener("click", () => {
+      const code = roomInput.value.trim().toUpperCase();
+      if (!code) { status.textContent = "Please enter a room code."; return; }
+      socket.emit("join_room", { code, username: myName("Guest") });
+    });
+
+    copyInviteBtn.addEventListener("click", () => {
+      if (!currentRoom) return;
+      const url = `${window.location.origin}/?room=${currentRoom}`;
+      navigator.clipboard.writeText(url).then(
+        () => { status.textContent = "Invite link copied to clipboard!"; },
+        () => { status.textContent = "Copy failed. Link: " + url; }
+      );
     });
 
     socket.on("room_created", (data) => {
-      currentRoom = data.room; isHost = true;
-      document.getElementById("roomCodeInput").value = data.room;
-      document.getElementById("statusMessage").textContent = "Room Created! Share Code: " + data.room;
+      currentRoom = data.code;
+      isHost = true;
+      roomInput.value = data.code;
+      copyInviteBtn.classList.remove("hidden");
+      status.textContent = "Room created! Share code: " + data.code;
     });
 
     socket.on("room_joined", (data) => {
-      currentRoom = data.room; isHost = data.is_host;
-      document.getElementById("statusMessage").textContent = "Joined Room: " + data.room;
-      if (data.video_id && player && player.loadVideoById) {
-        isRemoteAction = true;
-        player.loadVideoById(data.video_id, data.current_time || 0);
-        if (!data.is_playing) player.pauseVideo();
-        setTimeout(() => isRemoteAction = false, 1000);
-      }
+      currentRoom = data.code;
+      isHost = !!data.host;
+      roomInput.value = data.code;
+      copyInviteBtn.classList.remove("hidden");
+      status.textContent = "You joined room: " + data.code;
     });
 
-    socket.on("sync_action", (data) => {
-      if (!player) return;
-      isRemoteAction = true;
-      if (data.action === "play") { player.seekTo(data.time, true); player.playVideo(); }
-      else if (data.action === "pause") { player.seekTo(data.time, true); player.pauseVideo(); }
-      setTimeout(() => isRemoteAction = false, 800);
+    socket.on("room_error", (msg) => {
+      status.textContent = typeof msg === "string" ? msg : (msg && msg.message) || "Something went wrong.";
     });
 
-    socket.on("drift_check", (data) => {
-      if (isHost || !player || typeof player.getCurrentTime !== 'function') return;
-      if (Math.abs(player.getCurrentTime() - data.time) > 0.5) {
-        isRemoteAction = true;
-        player.seekTo(data.time, true);
-        if (data.is_playing) player.playVideo(); else player.pauseVideo();
-        setTimeout(() => isRemoteAction = false, 800);
-      }
+    socket.on("notice", (msg) => { status.textContent = msg; });
+
+    // Single source of truth for members, host, playlist, poll
+    socket.on("room_snapshot", (snap) => {
+      currentRoom = snap.code;
+      isHost = snap.host === socket.id;
+      renderUsers(snap.members);
+      renderPlaylist(snap.playlist);
+      renderPoll(snap.poll);
     });
 
-    setInterval(() => {
-      if (isHost && currentRoom && player && typeof player.getCurrentTime === 'function') {
-        socket.emit("host_heartbeat", { room: currentRoom, time: player.getCurrentTime(), is_playing: player.getPlayerState() === YT.PlayerState.PLAYING });
-      }
-    }, 2000);
+    // ---------- LOAD VIDEO FROM URL ----------
+    loadVideoBtn.addEventListener("click", () => {
+      const url = youtubeUrl.value.trim();
+      let videoId = "";
+      try {
+        const parsed = new URL(url);
+        const host = parsed.hostname.replace(/^www\./, "");
+        if (host === "youtu.be") {
+          videoId = parsed.pathname.slice(1).split("/")[0];
+        } else if (host === "youtube.com" || host === "m.youtube.com") {
+          if (parsed.pathname === "/watch") videoId = parsed.searchParams.get("v") || "";
+          else {
+            const m = parsed.pathname.match(/^\/(embed|shorts)\/([^/]+)/);
+            if (m) videoId = m[2];
+          }
+        }
+      } catch (e) { videoId = ""; }
 
-    // --- DANMAKU TIMED COMMENTS OVERLAY ---
-    const danmakuInput = document.getElementById("danmakuInput");
-    const sendDanmakuBtn = document.getElementById("sendDanmakuBtn");
-    const danmakuOverlay = document.getElementById("danmakuOverlay");
+      if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) { videoMessage.textContent = "Invalid YouTube URL."; return; }
+      if (!currentRoom) { videoMessage.textContent = "Please create or join a room first!"; return; }
 
-    function sendDanmaku() {
-      const text = danmakuInput.value.trim();
-      const user = document.getElementById("usernameInput").value.trim() || (isHost ? "Host" : "Guest");
-      if (text && currentRoom && player) {
-        socket.emit("send_timed_comment", { room: currentRoom, text: text, username: user, time: player.getCurrentTime() });
-        danmakuInput.value = "";
-      }
-    }
-
-    sendDanmakuBtn.addEventListener("click", sendDanmaku);
-    danmakuInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendDanmaku(); });
-
-    socket.on("new_timed_comment", (data) => {
-      const el = document.createElement("div");
-      el.className = "danmaku-text text-sm";
-      el.textContent = `${data.username}: ${data.text}`;
-      el.style.top = Math.random() * 70 + 10 + "%";
-      danmakuOverlay.appendChild(el);
-      setTimeout(() => el.remove(), 8000);
+      socket.emit("change_video", { video_id: videoId });
+      videoMessage.textContent = "Loading video...";
     });
 
-    // --- PARTY SNAPSHOT GENERATOR ---
-    document.getElementById("snapshotBtn").addEventListener("click", () => {
-      html2canvas(document.getElementById("snapshotTarget")).then(canvas => {
-        const link = document.createElement("a");
-        link.download = `VelvetWatch_Party_${currentRoom || 'Session'}.png`;
-        link.href = canvas.toDataURL("image/png");
-        link.click();
-      });
-    });
+    // ---------- CHAT ----------
+    const chatInput = $("chatInput");
+    const chatMessages = $("chatMessages");
 
-    // --- LOUNGE CHAT ---
-    const chatInput = document.getElementById("chatInput");
-    const sendChatBtn = document.getElementById("sendChatBtn");
-    const chatMessages = document.getElementById("chatMessages");
-
-    sendChatBtn.addEventListener("click", () => {
+    function sendChatMessage() {
       const msg = chatInput.value.trim();
-      const user = document.getElementById("usernameInput").value.trim() || (isHost ? "Host" : "Guest");
-      if (msg && currentRoom) {
-        socket.emit("send_chat", { room: currentRoom, message: msg, username: user });
-        chatInput.value = "";
-      }
-    });
+      if (!msg) return;
+      if (!currentRoom) { status.textContent = "Join a room before chatting."; return; }
+      socket.emit("chat_message", { message: msg });
+      chatInput.value = "";
+    }
+    $("sendChatBtn").addEventListener("click", sendChatMessage);
+    chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendChatMessage(); });
 
     socket.on("chat_message", (data) => {
       const el = document.createElement("div");
       el.className = "bg-[#121212] p-2 rounded-xl border border-[#282828]";
-      el.innerHTML = `<span class="font-bold text-[#E50914]">${data.username}:</span> ${data.message}`;
+      el.innerHTML = `<span class="font-bold text-[#E50914]">${esc(data.name)}:</span> <span class="text-white">${esc(data.message)}</span>`;
       chatMessages.appendChild(el);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     });
 
-    // --- REACTION EMOJIS ---
-    document.querySelectorAll(".reaction-btn").forEach(btn => {
+    // ---------- REACTIONS ----------
+    const emojiOverlay = $("emojiOverlay");
+    document.querySelectorAll(".reaction-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        if (currentRoom) socket.emit("send_reaction", { room: currentRoom, emoji: btn.textContent });
+        if (currentRoom) socket.emit("reaction", { emoji: btn.textContent.trim() });
       });
     });
 
-    socket.on("floating_emoji", (data) => {
+    socket.on("reaction", (data) => {
       const el = document.createElement("div");
       el.className = "emoji-float text-3xl";
       el.textContent = data.emoji;
       el.style.left = Math.random() * 80 + 10 + "%";
       el.style.bottom = "10px";
-      document.getElementById("emojiOverlay").appendChild(el);
+      emojiOverlay.appendChild(el);
       setTimeout(() => el.remove(), 2000);
     });
 
-    // --- FUZZY SEARCH ---
+    // ---------- MOVIE DISCOVERY ----------
     const mockMovies = [
-      { id: "Pw-Tr25wSyk", title: "Avatar: Way of Water", poster: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=300&q=80" },
-      { id: "L61p2uyiMSo", title: "The Dark Knight", poster: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=300&q=80" },
-      { id: "YoHD9XEInc0", title: "Inception", poster: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=300&q=80" }
+      { id: "Pw-Tr25wSyk", title: "Avatar: Way of Water", category: "Sci-Fi", year: "2022", poster: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=300&q=80" },
+      { id: "L61p2uyiMSo", title: "The Dark Knight", category: "Action", year: "2008", poster: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=300&q=80" },
+      { id: "YoHD9XEInc0", title: "Inception", category: "Sci-Fi", year: "2010", poster: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=300&q=80" },
+      { id: "mqqft2x_Aa4", title: "The Batman", category: "Action", year: "2022", poster: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=300&q=80" },
+      { id: "qEVUtrk8_B4", title: "John Wick", category: "Action", year: "2014", poster: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=300&q=80" },
+      { id: "8Qn_spdM5Zg", title: "Interstellar", category: "Sci-Fi", year: "2014", poster: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=300&q=80" },
+      { id: "EXeTwQWrcwY", title: "Spider-Man: No Way Home", category: "Action", year: "2021", poster: "https://images.unsplash.com/photo-1635863138275-d9b33299680b?w=300&q=80" },
+      { id: "TcMBFSGVi1c", title: "Avengers: Endgame", category: "Action", year: "2019", poster: "https://images.unsplash.com/photo-1568832359672-e36cf5d74f54?w=300&q=80" },
+      { id: "KPLWWIOCOOQ", title: "Oppenheimer", category: "Drama", year: "2023", poster: "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=300&q=80" },
+      { id: "shW9i6k8A0s", title: "Spider-Man: Across the Spider-Verse", category: "Animation", year: "2023", poster: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=300&q=80" }
     ];
 
-    const fuse = new Fuse(mockMovies, { keys: ["title"], threshold: 0.4 });
-    const movieGrid = document.getElementById("movieGrid");
+    const fuse = new Fuse(mockMovies, { keys: ["title", "category", "year"], threshold: 0.4 });
+    const movieGrid = $("movieGrid");
+    const searchMovieInput = $("searchMovieInput");
 
-    function renderMovies(list) {
+    function renderMovies(movies) {
       movieGrid.innerHTML = "";
-      list.forEach(m => {
+      movies.forEach((movie) => {
         const item = document.createElement("div");
-        item.className = "bg-[#121212] rounded-xl overflow-hidden border border-[#282828] cursor-pointer hover:border-[#E50914]";
-        item.innerHTML = `<img src="${m.poster}" class="w-full aspect-video object-cover" /><p class="p-1 text-[10px] font-bold truncate">${m.title}</p>`;
-        item.addEventListener("click", () => {
-          if (currentRoom) socket.emit("change_video", { room: currentRoom, video_id: m.id });
+        item.className = "group relative bg-[#121212] rounded-xl border border-[#282828] overflow-hidden transition-all text-xs flex flex-col justify-between";
+        item.innerHTML = `
+          <div>
+            <div class="aspect-video w-full overflow-hidden bg-[#121212]">
+              <img src="${esc(movie.poster)}" alt="${esc(movie.title)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            </div>
+            <div class="p-2">
+              <p class="font-bold text-white truncate">${esc(movie.title)}</p>
+              <p class="text-[10px] text-[#B3B3B3] mt-0.5">${esc(movie.category)} • ${esc(movie.year)}</p>
+            </div>
+          </div>
+          <div class="p-2 pt-0 flex gap-1">
+            <button class="play-now-btn flex-1 bg-[#E50914] text-white py-1 rounded text-[10px] font-bold">Play</button>
+            <button class="add-queue-btn bg-[#282828] hover:bg-[#3E3E3E] text-white px-2 py-1 rounded text-[10px] font-bold">+ Queue</button>
+          </div>`;
+
+        item.querySelector(".play-now-btn").addEventListener("click", () => {
+          if (currentRoom) socket.emit("change_video", { video_id: movie.id });
+          else videoMessage.textContent = "Please create or join a room first!";
+        });
+        item.querySelector(".add-queue-btn").addEventListener("click", () => {
+          if (currentRoom) socket.emit("add_to_playlist", { item: movie });
+          else videoMessage.textContent = "Please create or join a room first!";
         });
         movieGrid.appendChild(item);
       });
     }
-
     renderMovies(mockMovies);
-    document.getElementById("searchMovieInput").addEventListener("input", (e) => {
-      const q = e.target.value.trim();
-      renderMovies(q ? fuse.search(q).map(r => r.item) : mockMovies);
+
+    document.querySelectorAll(".cat-pill").forEach((pill) => {
+      pill.addEventListener("click", () => {
+        document.querySelectorAll(".cat-pill").forEach((p) => {
+          p.className = "cat-pill bg-[#121212] text-[#B3B3B3] hover:text-white px-3 py-1 rounded-full font-semibold border border-[#282828]";
+        });
+        pill.className = "cat-pill bg-[#E50914] text-white px-3 py-1 rounded-full font-bold";
+        activeCategory = pill.dataset.cat;
+        filterAndRender();
+      });
     });
+
+    function filterAndRender() {
+      const query = searchMovieInput.value.trim();
+      let list = query ? fuse.search(query).map((r) => r.item) : mockMovies;
+      if (activeCategory !== "All") list = list.filter((m) => m.category === activeCategory);
+      renderMovies(list);
+    }
+    searchMovieInput.addEventListener("input", filterAndRender);
+
+    // ---------- SIDEBAR TABS ----------
+    const tabs = [
+      [$("tabChat"), $("panelChat")],
+      [$("tabPolls"), $("panelPolls")],
+      [$("tabQueue"), $("panelQueue")],
+      [$("tabUsers"), $("panelUsers")]
+    ];
+    function switchTab(activeTab) {
+      tabs.forEach(([t, p]) => {
+        const on = t === activeTab;
+        t.className = on
+          ? "text-[#E50914] border-b-2 border-[#E50914] pb-1 px-1"
+          : "text-[#B3B3B3] hover:text-white pb-1 px-1";
+        p.classList.toggle("hidden", !on);
+      });
+    }
+    tabs.forEach(([t]) => t.addEventListener("click", () => switchTab(t)));
+
+    // ---------- PLAYLIST ----------
+    function renderPlaylist(playlist) {
+      const grid = $("playlistGrid");
+      if (!playlist || playlist.length === 0) {
+        grid.innerHTML = `<p class="text-[#535353] italic text-center py-6">Queue is empty. Click "+ Queue" on movie cards to add!</p>`;
+        return;
+      }
+      grid.innerHTML = "";
+      playlist.forEach((item, index) => {
+        const row = document.createElement("div");
+        row.className = "flex items-center gap-2 bg-[#121212] p-2 rounded-xl border border-[#282828]";
+        row.innerHTML = `
+          <img src="${esc(item.poster)}" class="w-12 h-8 object-cover rounded" />
+          <div class="flex-1 truncate">
+            <p class="font-bold text-white truncate">${esc(item.title)}</p>
+            <p class="text-[10px] text-[#B3B3B3]">Item #${index + 1}</p>
+          </div>
+          <button class="bg-[#E50914] text-white px-2 py-1 rounded text-[10px] font-bold">Play</button>`;
+        row.querySelector("button").addEventListener("click", () => {
+          socket.emit("change_video", { video_id: item.id });
+        });
+        grid.appendChild(row);
+      });
+    }
+
+    // ---------- POLLS ----------
+    $("startPollBtn").addEventListener("click", () => {
+      const q = $("pollQuestion").value.trim();
+      const o1 = $("pollOpt1").value.trim();
+      const o2 = $("pollOpt2").value.trim();
+      if (!currentRoom) { status.textContent = "Join a room first."; return; }
+      if (q && o1 && o2) {
+        socket.emit("create_poll", { question: q, options: [o1, o2] });
+        $("pollQuestion").value = ""; $("pollOpt1").value = ""; $("pollOpt2").value = "";
+      }
+    });
+
+    function renderPoll(poll) {
+      const box = $("pollContainer");
+      if (!poll) {
+        box.innerHTML = `<p class="text-[#535353] italic text-center py-6">No active group poll right now.</p>`;
+        return;
+      }
+      // reset "voted" state when a new poll appears
+      const key = poll.question + "|" + poll.options.map((o) => o.text).join("|");
+      if (key !== lastPollKey) { lastPollKey = key; hasVoted = false; }
+
+      const total = poll.options.reduce((a, o) => a + o.votes, 0);
+      box.innerHTML = `
+        <div class="bg-[#121212] p-3 rounded-xl border border-[#282828] space-y-2">
+          <p class="font-bold text-white">${esc(poll.question)}</p>
+          ${poll.options.map((opt, idx) => {
+            const pct = total > 0 ? Math.round((opt.votes / total) * 100) : 0;
+            return `
+              <div class="space-y-1">
+                <div class="flex justify-between text-[11px]">
+                  <span>${esc(opt.text)}</span>
+                  <span class="text-[#B3B3B3]">${opt.votes} votes (${pct}%)</span>
+                </div>
+                <div class="w-full bg-[#282828] h-2 rounded-full overflow-hidden">
+                  <div class="bg-[#E50914] h-full" style="width:${pct}%"></div>
+                </div>
+                <button data-idx="${idx}" class="vote-btn w-full text-center bg-[#282828] hover:bg-[#3E3E3E] text-white text-[10px] py-1 rounded mt-1 font-semibold">Vote</button>
+              </div>`;
+          }).join("")}
+        </div>`;
+      box.querySelectorAll(".vote-btn").forEach((b) => {
+        b.addEventListener("click", () => {
+          if (hasVoted) { status.textContent = "You already voted in this poll."; return; }
+          hasVoted = true;
+          socket.emit("vote_poll", { option_index: Number(b.dataset.idx) });
+        });
+      });
+    }
+
+    // ---------- USERS & HOST TRANSFER ----------
+    function renderUsers(members) {
+      const list = $("userList");
+      list.innerHTML = "";
+      (members || []).forEach((m) => {
+        const row = document.createElement("div");
+        row.className = "flex items-center justify-between bg-[#121212] p-2.5 rounded-xl border border-[#282828]";
+        row.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-white">${esc(m.name)}${m.id === socket.id ? " (you)" : ""}</span>
+            ${m.host ? '<span class="text-[9px] bg-[#E50914]/20 text-[#E50914] px-2 py-0.5 rounded-full font-bold">HOST</span>' : ""}
+          </div>
+          ${isHost && !m.host ? '<button class="make-host text-[10px] bg-[#282828] hover:bg-[#3E3E3E] text-white px-2 py-1 rounded">Make Host</button>' : ""}`;
+        const btn = row.querySelector(".make-host");
+        if (btn) btn.addEventListener("click", () => socket.emit("transfer_host", { target: m.id }));
+        list.appendChild(row);
+      });
+    }
   </script>
 </body>
 </html>
