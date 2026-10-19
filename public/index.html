@@ -21,8 +21,10 @@
   </style>
 </head>
 
+
 <body class="min-h-screen p-4 md:p-8 selection:bg-[#E50914] selection:text-white">
   <main class="max-w-6xl mx-auto">
+
 
     <header class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 pb-4 border-b border-[#282828]">
       <div class="flex items-center gap-3">
@@ -35,6 +37,7 @@
         </div>
       </div>
 
+
       <div class="flex items-center gap-2 w-full sm:w-auto">
         <button id="createRoomBtn" class="bg-[#E50914] hover:bg-[#ff0f1a] text-white px-5 py-2.5 rounded-full font-bold text-xs tracking-wider transition-all shadow-lg shadow-[#E50914]/25 hover:scale-105 active:scale-95 whitespace-nowrap">Create Room</button>
         <div class="flex gap-2 flex-1 sm:flex-initial">
@@ -45,23 +48,30 @@
       </div>
     </header>
 
+
     <p id="statusMessage" class="text-[#E50914] text-xs font-bold mb-6 text-center min-h-[16px]" aria-live="polite"></p>
+
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
 
+
       <div class="lg:col-span-2 space-y-5">
+
 
         <div class="flex flex-col sm:flex-row gap-2 bg-[#181818] p-2 rounded-2xl border border-[#282828]">
           <input id="youtubeUrl" type="url" placeholder="Paste a YouTube video link..." class="flex-1 rounded-xl bg-[#121212] border border-transparent px-4 py-2 text-white placeholder-[#535353] focus:outline-none focus:border-[#E50914] text-xs transition-all" />
           <button id="loadVideoBtn" class="bg-[#E50914] hover:bg-[#ff0f1a] text-white px-5 py-2 rounded-xl font-bold text-xs transition-all hover:scale-105 active:scale-95">Load Video</button>
         </div>
 
+
         <p id="videoMessage" class="text-[#B3B3B3] text-xs min-h-[16px] px-1"></p>
+
 
         <div class="relative aspect-video bg-black rounded-2xl overflow-hidden border border-[#282828] shadow-2xl shadow-red-950/20">
           <div id="youtubePlayer" class="w-full h-full"></div>
           <div id="emojiOverlay" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
         </div>
+
 
         <div class="flex items-center justify-between bg-[#181818] px-5 py-3 rounded-2xl border border-[#282828]">
           <span class="text-[11px] text-[#B3B3B3] font-bold uppercase tracking-wider">Reactions</span>
@@ -74,11 +84,13 @@
           </div>
         </div>
 
+
         <div class="bg-[#181818] p-5 rounded-2xl border border-[#282828] space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <h3 class="text-xs font-bold text-white uppercase tracking-wider">🎬 Shared Movie Discovery</h3>
             <span class="text-[10px] text-[#E50914] font-bold bg-[#121212] px-3 py-1 rounded-full border border-[#E50914]/20 self-start sm:self-auto">Fuse.js Fuzzy Search</span>
           </div>
+
 
           <div id="categoryPills" class="flex flex-wrap gap-2 text-xs">
             <button data-cat="All" class="cat-pill bg-[#E50914] text-white px-3 py-1 rounded-full font-bold">All</button>
@@ -88,13 +100,17 @@
             <button data-cat="Animation" class="cat-pill bg-[#121212] text-[#B3B3B3] hover:text-white px-3 py-1 rounded-full font-semibold border border-[#282828]">Animation</button>
           </div>
 
+
           <input id="searchMovieInput" type="text" placeholder="Type any movie title, year, or genre (fuzzy search)..." class="w-full rounded-xl bg-[#121212] border border-[#282828] px-3.5 py-2 text-xs text-white placeholder-[#535353] focus:outline-none focus:border-[#E50914] transition-all" />
+
 
           <div id="movieGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-64 overflow-y-auto pr-1"></div>
         </div>
       </div>
 
+
       <div class="bg-[#181818] p-4 rounded-2xl border border-[#282828] flex flex-col h-[650px]">
+
 
         <div class="flex border-b border-[#282828] mb-3 pb-2 gap-2 text-xs font-bold">
           <button id="tabChat" class="text-[#E50914] border-b-2 border-[#E50914] pb-1 px-1">💬 Chat</button>
@@ -103,9 +119,11 @@
           <button id="tabUsers" class="text-[#B3B3B3] hover:text-white pb-1 px-1">👥 Users</button>
         </div>
 
+
         <div class="mb-3">
           <input id="usernameInput" type="text" maxlength="24" placeholder="Your display name (set before create/join)..." class="w-full rounded-xl bg-[#121212] border border-[#282828] focus:border-[#E50914] px-3 py-1.5 text-xs text-white placeholder-[#535353] focus:outline-none transition-all font-semibold" />
         </div>
+
 
         <div id="panelChat" class="flex-1 flex flex-col min-h-0">
           <div id="chatMessages" class="flex-1 overflow-y-auto space-y-2.5 text-xs pr-1 mb-3">
@@ -116,6 +134,7 @@
             <button id="sendChatBtn" class="bg-[#E50914] hover:bg-[#ff0f1a] text-white px-4 py-2 rounded-xl text-xs font-bold">Send</button>
           </div>
         </div>
+
 
         <div id="panelPolls" class="hidden flex-1 flex flex-col min-h-0 space-y-3">
           <div id="pollContainer" class="flex-1 overflow-y-auto text-xs space-y-2">
@@ -129,29 +148,36 @@
           </div>
         </div>
 
+
         <div id="panelQueue" class="hidden flex-1 flex flex-col min-h-0">
           <div id="playlistGrid" class="flex-1 overflow-y-auto space-y-2 text-xs pr-1">
             <p class="text-[#535353] italic text-center py-6">Queue is empty. Click "+ Queue" on movie cards to add!</p>
           </div>
         </div>
 
+
         <div id="panelUsers" class="hidden flex-1 flex flex-col min-h-0">
           <div id="userList" class="flex-1 overflow-y-auto space-y-2 text-xs pr-1"></div>
         </div>
 
+
       </div>
     </div>
+
 
     <footer class="mt-8 rounded-2xl border border-[#282828] bg-[#181818] p-4 text-center">
       <p class="text-[#E50914] text-xs font-bold tracking-widest uppercase">✓ Real-Time Sync Engine Active (&le;500ms Drift Auto-Correction)</p>
     </footer>
   </main>
 
+
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
 
+
   <script>
     const socket = io();
+
 
     let player = null;
     let playerReady = false;
@@ -162,6 +188,7 @@
     let activeCategory = "All";
     let hasVoted = false;
     let lastPollKey = "";
+
 
     const $ = (id) => document.getElementById(id);
     const createBtn = $("createRoomBtn");
@@ -174,6 +201,7 @@
     const videoMessage = $("videoMessage");
     const usernameInput = $("usernameInput");
 
+
     // Escape user-provided text before putting it in innerHTML (prevents XSS)
     function esc(str) {
       const d = document.createElement("div");
@@ -181,10 +209,12 @@
       return d.innerHTML;
     }
 
+
     function remoteGuard(ms = 1000) {
       isRemoteAction = true;
       setTimeout(() => { isRemoteAction = false; }, ms);
     }
+
 
     // ?room=CODE in URL
     window.addEventListener("DOMContentLoaded", () => {
@@ -195,7 +225,9 @@
       }
     });
 
+
     socket.on("connect_error", () => { status.textContent = "Cannot reach the server. Is it running?"; });
+
 
     // ---------- YOUTUBE PLAYER ----------
     function onYouTubeIframeAPIReady() {
@@ -216,6 +248,7 @@
     }
     window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
 
+
     function applyVideo(data) {
       if (!playerReady) { pendingVideo = data; return; }
       remoteGuard(1200);
@@ -226,12 +259,14 @@
       }
     }
 
+
     function onPlayerStateChange(event) {
       if (isRemoteAction || !currentRoom || !isHost) return;
       if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.PAUSED) {
         sendPlayback();
       }
     }
+
 
     function sendPlayback() {
       if (!playerReady || !isHost || !currentRoom) return;
@@ -244,8 +279,10 @@
       });
     }
 
+
     // Host heartbeat every 2s so viewers can drift-correct
     setInterval(sendPlayback, 2000);
+
 
     // Viewers: apply host updates, correct drift > 0.5s
     socket.on("playback_update", (data) => {
@@ -254,29 +291,35 @@
       const state = player.getPlayerState();
       const isPlaying = state === YT.PlayerState.PLAYING;
 
+
       remoteGuard(800);
       if (drift > 0.5) player.seekTo(data.time, true);
       if (data.playing && !isPlaying) player.playVideo();
       else if (!data.playing && isPlaying) player.pauseVideo();
     });
 
+
     socket.on("video_changed", (data) => {
       applyVideo(data);
       videoMessage.textContent = "Room video updated!";
     });
 
+
     // ---------- ROOMS ----------
     function myName(fallback) { return usernameInput.value.trim() || fallback; }
+
 
     createBtn.addEventListener("click", () => {
       socket.emit("create_room", { username: myName("Host") });
     });
+
 
     joinBtn.addEventListener("click", () => {
       const code = roomInput.value.trim().toUpperCase();
       if (!code) { status.textContent = "Please enter a room code."; return; }
       socket.emit("join_room", { code, username: myName("Guest") });
     });
+
 
     copyInviteBtn.addEventListener("click", () => {
       if (!currentRoom) return;
@@ -287,6 +330,7 @@
       );
     });
 
+
     socket.on("room_created", (data) => {
       currentRoom = data.code;
       isHost = true;
@@ -294,6 +338,7 @@
       copyInviteBtn.classList.remove("hidden");
       status.textContent = "Room created! Share code: " + data.code;
     });
+
 
     socket.on("room_joined", (data) => {
       currentRoom = data.code;
@@ -303,11 +348,14 @@
       status.textContent = "You joined room: " + data.code;
     });
 
+
     socket.on("room_error", (msg) => {
       status.textContent = typeof msg === "string" ? msg : (msg && msg.message) || "Something went wrong.";
     });
 
+
     socket.on("notice", (msg) => { status.textContent = msg; });
+
 
     // Single source of truth for members, host, playlist, poll
     socket.on("room_snapshot", (snap) => {
@@ -317,6 +365,7 @@
       renderPlaylist(snap.playlist);
       renderPoll(snap.poll);
     });
+
 
     // ---------- LOAD VIDEO FROM URL ----------
     loadVideoBtn.addEventListener("click", () => {
@@ -336,16 +385,20 @@
         }
       } catch (e) { videoId = ""; }
 
+
       if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) { videoMessage.textContent = "Invalid YouTube URL."; return; }
       if (!currentRoom) { videoMessage.textContent = "Please create or join a room first!"; return; }
+
 
       socket.emit("change_video", { video_id: videoId });
       videoMessage.textContent = "Loading video...";
     });
 
+
     // ---------- CHAT ----------
     const chatInput = $("chatInput");
     const chatMessages = $("chatMessages");
+
 
     function sendChatMessage() {
       const msg = chatInput.value.trim();
@@ -357,6 +410,7 @@
     $("sendChatBtn").addEventListener("click", sendChatMessage);
     chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendChatMessage(); });
 
+
     socket.on("chat_message", (data) => {
       const el = document.createElement("div");
       el.className = "bg-[#121212] p-2 rounded-xl border border-[#282828]";
@@ -365,6 +419,7 @@
       chatMessages.scrollTop = chatMessages.scrollHeight;
     });
 
+
     // ---------- REACTIONS ----------
     const emojiOverlay = $("emojiOverlay");
     document.querySelectorAll(".reaction-btn").forEach((btn) => {
@@ -372,6 +427,7 @@
         if (currentRoom) socket.emit("reaction", { emoji: btn.textContent.trim() });
       });
     });
+
 
     socket.on("reaction", (data) => {
       const el = document.createElement("div");
@@ -382,6 +438,7 @@
       emojiOverlay.appendChild(el);
       setTimeout(() => el.remove(), 2000);
     });
+
 
     // ---------- MOVIE DISCOVERY ----------
     const mockMovies = [
@@ -397,9 +454,11 @@
       { id: "shW9i6k8A0s", title: "Spider-Man: Across the Spider-Verse", category: "Animation", year: "2023", poster: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=300&q=80" }
     ];
 
+
     const fuse = new Fuse(mockMovies, { keys: ["title", "category", "year"], threshold: 0.4 });
     const movieGrid = $("movieGrid");
     const searchMovieInput = $("searchMovieInput");
+
 
     function renderMovies(movies) {
       movieGrid.innerHTML = "";
@@ -421,6 +480,7 @@
             <button class="add-queue-btn bg-[#282828] hover:bg-[#3E3E3E] text-white px-2 py-1 rounded text-[10px] font-bold">+ Queue</button>
           </div>`;
 
+
         item.querySelector(".play-now-btn").addEventListener("click", () => {
           if (currentRoom) socket.emit("change_video", { video_id: movie.id });
           else videoMessage.textContent = "Please create or join a room first!";
@@ -434,6 +494,7 @@
     }
     renderMovies(mockMovies);
 
+
     document.querySelectorAll(".cat-pill").forEach((pill) => {
       pill.addEventListener("click", () => {
         document.querySelectorAll(".cat-pill").forEach((p) => {
@@ -445,6 +506,7 @@
       });
     });
 
+
     function filterAndRender() {
       const query = searchMovieInput.value.trim();
       let list = query ? fuse.search(query).map((r) => r.item) : mockMovies;
@@ -452,6 +514,7 @@
       renderMovies(list);
     }
     searchMovieInput.addEventListener("input", filterAndRender);
+
 
     // ---------- SIDEBAR TABS ----------
     const tabs = [
@@ -470,6 +533,7 @@
       });
     }
     tabs.forEach(([t]) => t.addEventListener("click", () => switchTab(t)));
+
 
     // ---------- PLAYLIST ----------
     function renderPlaylist(playlist) {
@@ -496,6 +560,7 @@
       });
     }
 
+
     // ---------- POLLS ----------
     $("startPollBtn").addEventListener("click", () => {
       const q = $("pollQuestion").value.trim();
@@ -508,6 +573,7 @@
       }
     });
 
+
     function renderPoll(poll) {
       const box = $("pollContainer");
       if (!poll) {
@@ -517,6 +583,7 @@
       // reset "voted" state when a new poll appears
       const key = poll.question + "|" + poll.options.map((o) => o.text).join("|");
       if (key !== lastPollKey) { lastPollKey = key; hasVoted = false; }
+
 
       const total = poll.options.reduce((a, o) => a + o.votes, 0);
       box.innerHTML = `
@@ -545,6 +612,7 @@
         });
       });
     }
+
 
     // ---------- USERS & HOST TRANSFER ----------
     function renderUsers(members) {

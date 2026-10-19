@@ -2,26 +2,35 @@ import secrets
 import string
 from pathlib import Path
 
+
 import socketio
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+
 BASE = Path(__file__).resolve().parent
 PUBLIC = BASE / "public"
+
 
 app = FastAPI()
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 
+
 rooms = {}
 sid_rooms = {}
 
+
 ALLOWED_EMOJIS = ["❤️", "🔥", "😭", "😮", "💀", "😂", "👏", "🎉"]
+
+
 
 
 def make_code():
     chars = string.ascii_uppercase + string.digits
     return "".join(secrets.choice(chars) for _ in range(6))
+
+
 
 
 def snapshot(code):
@@ -42,9 +51,13 @@ def snapshot(code):
     }
 
 
+
+
 async def update_snapshot(code):
     if code in rooms:
         await sio.emit("room_snapshot", snapshot(code), room=code)
+
+
 
 
 async def remove_from_room(sid, code):
@@ -63,23 +76,30 @@ async def remove_from_room(sid, code):
     await update_snapshot(code)
 
 
+
+
 @sio.event
 async def connect(sid, environ):
     print(f"Client connected: {sid}")
+
+
 
 
 @sio.event
 async def create_room(sid, data=None):
     data = data or {}
 
+
     # leave any previous room first
     old = sid_rooms.pop(sid, None)
     if old:
         await remove_from_room(sid, old)
 
+
     code = make_code()
     while code in rooms:
         code = make_code()
+
 
     await sio.enter_room(sid, code)
     sid_rooms[sid] = code
@@ -94,6 +114,8 @@ async def create_room(sid, data=None):
     }
     await sio.emit("room_created", {"code": code}, to=sid)
     await update_snapshot(code)
+
+
 
 
 @sio.event
@@ -111,16 +133,20 @@ async def join_room(sid, data=None):
         await sio.emit("room_error", "This room is full (10 people maximum).", to=sid)
         return
 
+
     old = sid_rooms.pop(sid, None)
     if old and old != code:
         await remove_from_room(sid, old)
+
 
     await sio.enter_room(sid, code)
     sid_rooms[sid] = code
     rooms[code]["members"][sid] = {"name": str(data.get("username") or "Guest")[:24]}
 
+
     await sio.emit("room_joined", {"code": code, "host": rooms[code]["host"] == sid}, to=sid)
     await update_snapshot(code)
+
 
     r = rooms[code]
     if r["video_id"]:
@@ -131,12 +157,16 @@ async def join_room(sid, data=None):
         )
 
 
+
+
 @sio.event
 async def disconnect(sid):
     print(f"Client disconnected: {sid}")
     code = sid_rooms.pop(sid, None)
     if code:
         await remove_from_room(sid, code)
+
+
 
 
 @sio.event
@@ -153,6 +183,8 @@ async def change_video(sid, data=None):
     r.update(video_id=video_id, time=0, playing=True)
     await sio.emit("video_changed", {"video_id": video_id, "time": 0, "playing": True}, room=code)
     await update_snapshot(code)
+
+
 
 
 @sio.event
@@ -174,6 +206,8 @@ async def playback_update(sid, data=None):
     )
 
 
+
+
 @sio.event
 async def chat_message(sid, data=None):
     code = sid_rooms.get(sid)
@@ -186,6 +220,8 @@ async def chat_message(sid, data=None):
         await sio.emit("chat_message", {"name": name, "message": message}, room=code)
 
 
+
+
 @sio.event
 async def reaction(sid, data=None):
     code = sid_rooms.get(sid)
@@ -194,6 +230,8 @@ async def reaction(sid, data=None):
         if emoji not in ALLOWED_EMOJIS:
             emoji = "❤️"
         await sio.emit("reaction", {"emoji": emoji}, room=code)
+
+
 
 
 @sio.event
@@ -214,6 +252,8 @@ async def add_to_playlist(sid, data=None):
     await update_snapshot(code)
 
 
+
+
 @sio.event
 async def create_poll(sid, data=None):
     code = sid_rooms.get(sid)
@@ -230,6 +270,8 @@ async def create_poll(sid, data=None):
         "voted": set(),
     }
     await update_snapshot(code)
+
+
 
 
 @sio.event
@@ -250,6 +292,8 @@ async def vote_poll(sid, data=None):
         await update_snapshot(code)
 
 
+
+
 @sio.event
 async def transfer_host(sid, data=None):
     code = sid_rooms.get(sid)
@@ -262,6 +306,8 @@ async def transfer_host(sid, data=None):
         await update_snapshot(code)
 
 
+
+
 @sio.event
 async def request_snapshot(sid):
     code = sid_rooms.get(sid)
@@ -269,8 +315,11 @@ async def request_snapshot(sid):
         await sio.emit("room_snapshot", snapshot(code), to=sid)
 
 
+
+
 app.mount("/", StaticFiles(directory=PUBLIC, html=True), name="public")
 socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
+
 
 if __name__ == "__main__":
     uvicorn.run(socket_app, host="127.0.0.1", port=8000)
